@@ -51,15 +51,20 @@
   .field > input:focus,.field > select:focus{outline:none;border-color:var(--text);box-shadow:0 0 0 3px rgba(23,23,28,.08)}
   .field > input::placeholder{color:#b0b0bb}
   .field.invalid > input,.field.invalid > select{border-color:var(--red);background:#fef2f2}
-  .time-input{display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;padding:0 10px;background:var(--surface);font-family:var(--mono);font-size:14px;transition:all .15s;height:38px}
-  .time-input:focus-within{border-color:var(--text);box-shadow:0 0 0 3px rgba(23,23,28,.08)}
-  .field.invalid .time-input{border-color:var(--red);background:#fef2f2}
-  .time-input input{border:none;outline:none;background:transparent;width:38px;text-align:center;font:inherit;padding:0;color:var(--text);font-family:var(--mono);font-weight:600}
-  .time-input input::placeholder{color:#c8c8d0;font-weight:500}
-  .time-input .sep{color:var(--muted);font-weight:700;padding:0 3px;user-select:none;font-family:var(--mono)}
-  .time-input input::-webkit-outer-spin-button,.time-input input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  .time-input input[type=number]{-moz-appearance:textfield}
+  /* Single-field time input */
+  .time-field{
+    width:100%;font:inherit;font-size:14px;padding:9px 12px;border-radius:8px;
+    border:1px solid var(--border);background:var(--surface);color:var(--text);
+    font-family:var(--mono);font-weight:600;letter-spacing:0.04em;
+  }
+  .time-field:focus{outline:none;border-color:var(--text);box-shadow:0 0 0 3px rgba(23,23,28,.08)}
+  .field.incomplete .time-field{border-color:var(--amber);background:#fffbeb}
+  .field.invalid .time-field{border-color:var(--red);background:#fef2f2}
+  .field.ready .time-field{border-color:var(--green);background:#f0fdf4}
   .field-hint{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.4}
+  .field-hint.incomplete{color:#92400e;font-weight:500}
+  .field-hint.ready{color:#065f46;font-weight:600}
+  .field-hint.error{color:#991b1b;font-weight:500}
   .computed-box{background:#fafafb;border:1px dashed var(--border);border-radius:8px;padding:9px 12px;font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text);min-height:38px;display:flex;align-items:center}
   .computed-box.empty{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--sans);font-size:12.5px}
   .rest-days{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
@@ -102,8 +107,6 @@
   .feel-panel .fp-row .field select{background:#fff;border-color:#fdba74}
   .feel-panel .fp-note{font-size:11px;color:#7c2d12;margin-top:10px;line-height:1.45;opacity:.85}
   .feel-panel.collapsed .fp-note{color:var(--muted)}
-
-  /* Capacity warning card */
   .capacity-warning{background:#fef3c7;border:2px solid #f59e0b;border-radius:12px;padding:20px 24px;margin-bottom:18px}
   .capacity-warning h3{font-size:16px;font-weight:700;color:#78350f;margin-bottom:8px;display:flex;align-items:center;gap:8px}
   .capacity-warning .cw-icon{font-size:22px;line-height:1}
@@ -113,11 +116,8 @@
   .capacity-warning .btn.primary:hover{background:#7c2d12}
   .capacity-warning .btn.ghost-warning{background:transparent;border-color:#f59e0b;color:#78350f}
   .capacity-warning .btn.ghost-warning:hover{background:#fed7aa}
-
-  /* Injury banner in the plan */
   .injury-banner{background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:12.5px;color:#78350f;line-height:1.55;display:flex;gap:10px;align-items:flex-start}
   .injury-banner .ib-icon{font-size:18px;flex-shrink:0;line-height:1.1}
-
   td.adjusted-cell{background:#fffbeb!important}
   td.adjusted-cell.sick{background:#fef2f2!important}
   td.adjusted-cell.busy{background:#f0f9ff!important}
@@ -371,14 +371,8 @@
           </div>
           <div class="field" id="field-curTime">
             <label>Race time <span class="req">*</span></label>
-            <div class="time-input">
-              <input type="tel" id="curTimeH" maxlength="2" placeholder="00" inputmode="numeric" aria-label="hours">
-              <span class="sep">:</span>
-              <input type="tel" id="curTimeM" maxlength="2" placeholder="00" inputmode="numeric" aria-label="minutes">
-              <span class="sep">:</span>
-              <input type="tel" id="curTimeS" maxlength="2" placeholder="00" inputmode="numeric" aria-label="seconds">
-            </div>
-            <div class="field-hint">HH : MM : SS · minutes and seconds 0–59</div>
+            <input type="text" class="time-field" id="curTime" placeholder="00:00:00" autocomplete="off" inputmode="numeric" maxlength="8">
+            <div class="field-hint" id="curTimeHint">Enter HH:MM:SS — type all 6 digits</div>
           </div>
           <div class="field" id="field-currentKm">
             <label>Current weekly km <span class="req">*</span></label>
@@ -402,14 +396,8 @@
           </div>
           <div class="field" id="field-goalTime">
             <label>Goal time <span class="req">*</span></label>
-            <div class="time-input">
-              <input type="tel" id="goalTimeH" maxlength="2" placeholder="00" inputmode="numeric" aria-label="hours">
-              <span class="sep">:</span>
-              <input type="tel" id="goalTimeM" maxlength="2" placeholder="00" inputmode="numeric" aria-label="minutes">
-              <span class="sep">:</span>
-              <input type="tel" id="goalTimeS" maxlength="2" placeholder="00" inputmode="numeric" aria-label="seconds">
-            </div>
-            <div class="field-hint">HH : MM : SS · minutes and seconds 0–59</div>
+            <input type="text" class="time-field" id="goalTime" placeholder="00:00:00" autocomplete="off" inputmode="numeric" maxlength="8">
+            <div class="field-hint" id="goalTimeHint">Enter HH:MM:SS — type all 6 digits</div>
           </div>
         </div>
       </div>
@@ -643,73 +631,118 @@ var PCT={E_SLOW:0.62,E_FAST:0.74,M:0.81,T:0.88,I:0.98,R:1.06};
 var ELITE_MIN_SECONDS = {1500:206, 1609.344:223, 3000:440, 5000:755, 10000:1571, 21097.5:3480, 42195:7235};
 
 /* ============================ TIME INPUT ============================ */
-function readTimeField(prefix){
-  var hEl = document.getElementById(prefix+'H');
-  var mEl = document.getElementById(prefix+'M');
-  var sEl = document.getElementById(prefix+'S');
-  if (!hEl || !mEl || !sEl) return { seconds: null, empty: true, invalid: false };
-  var hStr = (hEl.value || '').trim();
-  var mStr = (mEl.value || '').trim();
-  var sStr = (sEl.value || '').trim();
-  if (!hStr && !mStr && !sStr) return { seconds: null, empty: true, invalid: false };
-  var h = parseInt(hStr, 10) || 0;
-  var m = parseInt(mStr, 10) || 0;
-  var s = parseInt(sStr, 10) || 0;
-  if (m > 59 || s > 59) return { seconds: null, empty: false, invalid: true };
-  var total = h*3600 + m*60 + s;
-  if (total <= 0) return { seconds: null, empty: true, invalid: false };
-  return { seconds: total, empty: false, invalid: false };
+/* Mask digits string into HH:MM:SS with auto-colons */
+function maskTimeDigits(digits){
+  if (!digits) return '';
+  var hh = digits.substring(0, Math.min(2, digits.length));
+  var rest1 = digits.substring(2);
+  var mm = rest1.substring(0, Math.min(2, rest1.length));
+  var rest2 = rest1.substring(2);
+  var ss = rest2.substring(0, Math.min(2, rest2.length));
+  var out = hh;
+  if (digits.length >= 2) out += ':';
+  if (mm) out += mm;
+  if (digits.length >= 4) out += ':';
+  if (ss) out += ss;
+  return out;
 }
-function writeTimeField(prefix, sec){
-  var hEl = document.getElementById(prefix+'H');
-  var mEl = document.getElementById(prefix+'M');
-  var sEl = document.getElementById(prefix+'S');
-  if (!hEl || !mEl || !sEl) return;
-  if (!sec || sec <= 0){ hEl.value=''; mEl.value=''; sEl.value=''; return; }
+/* Read the field — returns { seconds, empty, incomplete, invalid, message } */
+function readTimeField(id){
+  var el = document.getElementById(id);
+  if (!el) return { seconds: null, empty: true, incomplete: false, invalid: false };
+  var digits = (el.value || '').replace(/\D/g, '');
+  if (digits.length === 0) return { seconds: null, empty: true, incomplete: false, invalid: false };
+  if (digits.length < 6){
+    var missing = 6 - digits.length;
+    return { seconds: null, empty: false, incomplete: true, invalid: false, message: missing + ' more digit' + (missing === 1 ? '' : 's') + ' needed' };
+  }
+  var h = parseInt(digits.substring(0, 2), 10);
+  var m = parseInt(digits.substring(2, 4), 10);
+  var s = parseInt(digits.substring(4, 6), 10);
+  if (m > 59){
+    return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Minutes must be 0–59' };
+  }
+  if (s > 59){
+    return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Seconds must be 0–59' };
+  }
+  var total = h*3600 + m*60 + s;
+  if (total <= 0){
+    return { seconds: null, empty: true, incomplete: false, invalid: false };
+  }
+  return { seconds: total, empty: false, incomplete: false, invalid: false };
+}
+/* Write seconds into field */
+function writeTimeField(id, sec){
+  var el = document.getElementById(id);
+  if (!el) return;
+  if (!sec || sec <= 0){ el.value = ''; return; }
   var h = Math.floor(sec/3600);
   var m = Math.floor((sec%3600)/60);
   var s = Math.round(sec%60);
   if (s === 60){ s = 0; m += 1; }
   if (m === 60){ m = 0; h += 1; }
-  hEl.value = h > 0 ? String(h).padStart(2,'0') : '';
-  mEl.value = (h > 0 || m > 0) ? String(m).padStart(2,'0') : '';
-  sEl.value = String(s).padStart(2,'0');
+  el.value = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
 }
-function setupTimeField(prefix){
-  var units = ['H','M','S'];
-  units.forEach(function(u, idx){
-    var el = document.getElementById(prefix+u);
-    if (!el) return;
-    el.addEventListener('input', function(e){
-      var v = e.target.value.replace(/\D/g, '').slice(0, 2);
-      e.target.value = v;
-      if (v.length === 2 && idx < units.length - 1){
-        var next = document.getElementById(prefix+units[idx+1]);
-        if (next){ next.focus(); next.select(); }
-      }
-      updateInputState();
-    });
-    el.addEventListener('keydown', function(e){
-      if (e.key === 'Backspace' && e.target.value === '' && idx > 0){
-        var prev = document.getElementById(prefix+units[idx-1]);
-        if (prev){ prev.focus(); prev.select(); e.preventDefault(); }
-      }
-      if (e.key === 'ArrowRight' && e.target.selectionStart === e.target.value.length && idx < units.length - 1){
-        var next = document.getElementById(prefix+units[idx+1]);
-        if (next){ next.focus(); next.select(); e.preventDefault(); }
-      }
-      if (e.key === 'ArrowLeft' && e.target.selectionStart === 0 && idx > 0){
-        var prev = document.getElementById(prefix+units[idx-1]);
-        if (prev){ prev.focus(); prev.select(); e.preventDefault(); }
-      }
-    });
-    el.addEventListener('blur', function(){
-      if (el.value.length === 1) el.value = '0' + el.value;
-      updateInputState();
-    });
-    el.addEventListener('focus', function(){ el.select(); });
+/* Setup masking + backspace + focus behavior */
+function setupTimeField(id){
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', function(e){
+    var digits = e.target.value.replace(/\D/g, '').slice(0, 6);
+    e.target.value = maskTimeDigits(digits);
+    /* Keep cursor at end */
+    try { e.target.setSelectionRange(e.target.value.length, e.target.value.length); } catch(err){}
+    updateInputState();
   });
+  el.addEventListener('keydown', function(e){
+    if (e.key === 'Backspace'){
+      /* Prevent default so we can handle digit removal ourselves */
+      var digits = el.value.replace(/\D/g, '');
+      if (digits.length > 0){
+        e.preventDefault();
+        digits = digits.substring(0, digits.length - 1);
+        el.value = maskTimeDigits(digits);
+        try { el.setSelectionRange(el.value.length, el.value.length); } catch(err){}
+        updateInputState();
+      }
+    }
+    /* Block non-numeric printable keys */
+    if (e.key.length === 1 && !/[0-9]/.test(e.key) && !e.metaKey && !e.ctrlKey){
+      e.preventDefault();
+    }
+  });
+  el.addEventListener('focus', function(){ el.select(); });
 }
+function updateTimeFieldDisplay(id, hintId){
+  var el = document.getElementById(id);
+  var hintEl = document.getElementById(hintId);
+  var fieldEl = el ? el.closest('.field') : null;
+  if (!el || !hintEl || !fieldEl) return;
+  fieldEl.classList.remove('incomplete', 'invalid', 'ready');
+  hintEl.classList.remove('incomplete', 'ready', 'error');
+  var res = readTimeField(id);
+  if (res.empty){
+    hintEl.textContent = 'Enter HH:MM:SS — type all 6 digits';
+    return;
+  }
+  if (res.incomplete){
+    fieldEl.classList.add('incomplete');
+    hintEl.classList.add('incomplete');
+    hintEl.textContent = res.message;
+    return;
+  }
+  if (res.invalid){
+    fieldEl.classList.add('invalid');
+    hintEl.classList.add('error');
+    hintEl.textContent = res.message;
+    return;
+  }
+  fieldEl.classList.add('ready');
+  hintEl.classList.add('ready');
+  hintEl.textContent = '✓ Ready';
+}
+
+/* ============================ FMT ============================ */
 function fmtTime(sec,opt){
   opt=opt||{};
   if(!isFinite(sec)||sec<=0)return '—';
@@ -746,7 +779,7 @@ function validateRaceInput(distanceM, timeSec){
     return {valid: false, reason: 'That time implies a fitness level above the world\'s best.'};
   }
   if (vdot < 10){
-    return {valid: false, reason: 'That time implies a fitness below what VDOT handles well. If you\'re just starting out, try <strong>"I\'m new to running"</strong> mode.'};
+    return {valid: false, reason: 'That time implies a fitness below what VDOT handles well.'};
   }
   return {valid: true, vdot: vdot};
 }
@@ -976,7 +1009,6 @@ function padEasyRuns(days, weekLen, targetKm, longRunKm){
   var scaledTarget = Math.round(targetKm * (weekLen / 7));
   var shortfall = Math.round(scaledTarget - currentKm);
   if (shortfall <= 0) return;
-  /* Raised from 0.65 to 0.85 of long run distance */
   var cap = longRunKm ? longRunKm * 0.85 : 15;
   for (var i = 0; i < easyIndices.length && shortfall > 0; i++){
     var idx = easyIndices[i];
@@ -999,7 +1031,6 @@ function padQualitySessions(days, weekLen, targetKm, longRunKm){
     var d = days[i];
     if (!d) continue;
     if (isFinite(d.totalKm)) currentKm += d.totalKm;
-    /* Pad I, T, R quality sessions — not M, not TT, not sims */
     if (d.isQ && !d.isTT && !d.isSim && !d.adjusted && !d.isLongRun && (d.zone === 'I' || d.zone === 'T' || d.zone === 'R')){
       qIndices.push(i);
     }
@@ -1008,7 +1039,6 @@ function padQualitySessions(days, weekLen, targetKm, longRunKm){
   var scaledTarget = Math.round(targetKm * (weekLen / 7));
   var shortfall = Math.round(scaledTarget - currentKm);
   if (shortfall <= 0) return;
-  /* Cap Q session size: no bigger than 0.85 of long run */
   var sessionCap = longRunKm ? longRunKm * 0.85 : 14;
   var perQMax = 5;
   var perQ = Math.min(perQMax, Math.ceil(shortfall / qIndices.length));
@@ -1187,7 +1217,6 @@ function generatePlan(cfg){
           }
         }
       }
-      /* Filler: E first, then Q sessions if still short */
       if (!isRaceWeek && !isTaperWeek && !isCutback){
         padEasyRuns(days, weekLen, weekVol, longRunRef);
         padQualitySessions(days, weekLen, weekVol, longRunRef);
@@ -1549,7 +1578,7 @@ function renderPlan(result,meta,userName){
     html+='<p>Week '+result.ttWeek+' includes a <strong>'+result.ttDistanceLabel+' time trial</strong>. Run it hard and even. Enter the result below and we\'ll re-check your fitness.</p>';
     html+='<div class="recal-row">';
     html+='<div class="field"><label>Distance</label><select id="ttDistance">'+ttSelectOptions(result.ttDistance)+'</select></div>';
-    html+='<div class="field"><label>Time</label><div class="time-input"><input type="tel" id="ttTimeH" maxlength="2" placeholder="00" inputmode="numeric"><span class="sep">:</span><input type="tel" id="ttTimeM" maxlength="2" placeholder="00" inputmode="numeric"><span class="sep">:</span><input type="tel" id="ttTimeS" maxlength="2" placeholder="00" inputmode="numeric"></div></div>';
+    html+='<div class="field"><label>Time</label><input type="text" class="time-field" id="ttTime" placeholder="00:00:00" autocomplete="off" inputmode="numeric" maxlength="8"></div>';
     html+='<button class="btn primary" id="recalBtn" style="padding:8px 16px">Recalculate</button>';
     html+='</div></div>';
   }
@@ -1588,10 +1617,10 @@ function readCfgStandard(){
     raceDate:document.getElementById('raceDate').value||'',
     longDay:parseInt(document.getElementById('longRunDay').value),
     curDist:curDist, curTime:curTimeRes.seconds,
-    curTimeEmpty:curTimeRes.empty, curTimeInvalid:curTimeRes.invalid,
+    curTimeEmpty:curTimeRes.empty, curTimeIncomplete:curTimeRes.incomplete, curTimeInvalid:curTimeRes.invalid,
     currentKm:rawCur===''?0:parseFloat(rawCur),
     goalDist:goalDist, goalTime:goalTimeRes.seconds,
-    goalTimeEmpty:goalTimeRes.empty, goalTimeInvalid:goalTimeRes.invalid,
+    goalTimeEmpty:goalTimeRes.empty, goalTimeIncomplete:goalTimeRes.incomplete, goalTimeInvalid:goalTimeRes.invalid,
     peakKm:rawPeak===''?0:parseFloat(rawPeak),
     restDays:state.allRestDays
   };
@@ -1624,7 +1653,8 @@ function validateStandard(cfg){
   var weeks=computeWeeks(cfg.startDate,cfg.raceDate);
   if(cfg.startDate&&cfg.raceDate&&(!weeks||weeks<2)){missing.push('race date at least 2 weeks after start');markInvalid('field-raceDate');}
   if(!cfg.curDist||isNaN(cfg.curDist)){missing.push('recent race distance');markInvalid('field-curDist');}
-  if(cfg.curTimeInvalid){missing.push('valid race time (min and sec 0–59)');markInvalid('field-curTime');}
+  if(cfg.curTimeIncomplete){missing.push('complete race time (all 6 digits)');markInvalid('field-curTime');}
+  else if(cfg.curTimeInvalid){missing.push('valid race time (min and sec 0–59)');markInvalid('field-curTime');}
   else if(!cfg.curTime){missing.push('recent race time');markInvalid('field-curTime');}
   else {
     var check1 = validateRaceInput(cfg.curDist, cfg.curTime);
@@ -1632,7 +1662,8 @@ function validateStandard(cfg){
   }
   if(!cfg.currentKm||cfg.currentKm<=0){missing.push('current weekly km');markInvalid('field-currentKm');}
   if(!cfg.goalDist||isNaN(cfg.goalDist)){missing.push('goal distance');markInvalid('field-goalDist');}
-  if(cfg.goalTimeInvalid){missing.push('valid goal time (min and sec 0–59)');markInvalid('field-goalTime');}
+  if(cfg.goalTimeIncomplete){missing.push('complete goal time (all 6 digits)');markInvalid('field-goalTime');}
+  else if(cfg.goalTimeInvalid){missing.push('valid goal time (min and sec 0–59)');markInvalid('field-goalTime');}
   else if(!cfg.goalTime){missing.push('goal time');markInvalid('field-goalTime');}
   else {
     var check2 = validateRaceInput(cfg.goalDist, cfg.goalTime);
@@ -1674,6 +1705,8 @@ function updateWeeksDisplay(){
 }
 function updateInputState(){
   updateWeeksDisplay();
+  updateTimeFieldDisplay('curTime', 'curTimeHint');
+  updateTimeFieldDisplay('goalTime', 'goalTimeHint');
   var missing, btn=document.getElementById('analyzeBtn'), status=document.getElementById('inputStatus');
   if (state.planType === 'standard'){
     var cfg = readCfgStandard();
@@ -1698,7 +1731,6 @@ function runStandardAnalysis(force){
   var capacity = computeCapacity(cfg.goalDist, trainingDays);
   cfg.weeks=weeks; cfg.raceIdx=raceIdx;
 
-  /* Capacity check */
   if (cfg.peakKm > capacity && !force){
     showCapacityWarning(cfg, trainingDays, capacity, weeks, raceIdx);
     return;
@@ -1833,8 +1865,9 @@ function handleRecalibrate(){
   var dist=parseFloat(document.getElementById('ttDistance').value);
   var tRes = readTimeField('ttTime');
   var t = tRes.seconds;
-  if (tRes.invalid){ alert('Minutes and seconds must be 0–59.'); return; }
-  if(!t||t<=0){alert('Enter a valid TT time (e.g. 22:10).');return;}
+  if (tRes.incomplete){ alert('Enter all 6 digits for the TT time.'); return; }
+  if (tRes.invalid){ alert(tRes.message); return; }
+  if(!t||t<=0){alert('Enter a valid TT time (HH:MM:SS).');return;}
   if(!state.plan.ttWeek){alert('No time trial scheduled in this plan.');return;}
   var check = validateRaceInput(dist, t);
   if (!check.valid){ alert(check.reason.replace(/<[^>]+>/g,'')); return; }
@@ -2144,7 +2177,7 @@ function adjustWorkout(day, mode, isFirstQOfWeek){
 setupTimeField('curTime');
 setupTimeField('goalTime');
 
-var inputIds=['userName','startDate','raceDate','curDist','currentKm','goalDist','peakKm','bStartDate','bRaceDate','bAbility','bDays','bGoal','curTimeH','curTimeM','curTimeS','goalTimeH','goalTimeM','goalTimeS'];
+var inputIds=['userName','startDate','raceDate','curDist','currentKm','goalDist','peakKm','bStartDate','bRaceDate','bAbility','bDays','bGoal'];
 for(var i=0;i<inputIds.length;i++){
   (function(id){
     var el=document.getElementById(id);
