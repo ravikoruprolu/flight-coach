@@ -51,11 +51,7 @@
   .field > input:focus,.field > select:focus{outline:none;border-color:var(--text);box-shadow:0 0 0 3px rgba(23,23,28,.08)}
   .field > input::placeholder{color:#b0b0bb}
   .field.invalid > input,.field.invalid > select{border-color:var(--red);background:#fef2f2}
-  .time-field{
-    width:100%;font:inherit;font-size:14px;padding:9px 12px;border-radius:8px;
-    border:1px solid var(--border);background:var(--surface);color:var(--text);
-    font-family:var(--mono);font-weight:600;letter-spacing:0.04em;
-  }
+  .time-field{width:100%;font:inherit;font-size:14px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--mono);font-weight:600;letter-spacing:0.04em}
   .time-field:focus{outline:none;border-color:var(--text);box-shadow:0 0 0 3px rgba(23,23,28,.08)}
   .field.incomplete .time-field{border-color:var(--amber);background:#fffbeb}
   .field.invalid .time-field{border-color:var(--red);background:#fef2f2}
@@ -106,17 +102,6 @@
   .feel-panel .fp-row .field select{background:#fff;border-color:#fdba74}
   .feel-panel .fp-note{font-size:11px;color:#7c2d12;margin-top:10px;line-height:1.45;opacity:.85}
   .feel-panel.collapsed .fp-note{color:var(--muted)}
-  .capacity-warning{background:#fef3c7;border:2px solid #f59e0b;border-radius:12px;padding:20px 24px;margin-bottom:18px}
-  .capacity-warning h3{font-size:16px;font-weight:700;color:#78350f;margin-bottom:8px;display:flex;align-items:center;gap:8px}
-  .capacity-warning .cw-icon{font-size:22px;line-height:1}
-  .capacity-warning p{font-size:13.5px;color:#78350f;line-height:1.55;margin-bottom:14px}
-  .capacity-warning .actions{display:flex;gap:8px;flex-wrap:wrap}
-  .capacity-warning .btn.primary{background:#9a3412;border-color:#9a3412}
-  .capacity-warning .btn.primary:hover{background:#7c2d12}
-  .capacity-warning .btn.ghost-warning{background:transparent;border-color:#f59e0b;color:#78350f}
-  .capacity-warning .btn.ghost-warning:hover{background:#fed7aa}
-  .injury-banner{background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:12.5px;color:#78350f;line-height:1.55;display:flex;gap:10px;align-items:flex-start}
-  .injury-banner .ib-icon{font-size:18px;flex-shrink:0;line-height:1.1}
   td.adjusted-cell{background:#fffbeb!important}
   td.adjusted-cell.sick{background:#fef2f2!important}
   td.adjusted-cell.busy{background:#f0f9ff!important}
@@ -560,7 +545,6 @@
 <script>
 var APP_VERSION = 'v20';
 
-/* ============================ DATE ============================ */
 function parseLocalDate(str){
   if (!str) return null;
   var parts = String(str).split('-');
@@ -618,7 +602,6 @@ function fmtDateShort(d){return d.toLocaleDateString('en-US',{month:'short',day:
 function fmtDateLong(d){return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});}
 function dayNameOf(d){return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];}
 
-/* ============================ VDOT ============================ */
 var Vdot={
   vo2FromSpeed:function(v){return -4.60+0.182258*v+0.000104*v*v;},
   fractionOfVdot:function(t){return 0.8+0.1894393*Math.exp(-0.012778*t)+0.2989558*Math.exp(-0.1932605*t);},
@@ -629,10 +612,6 @@ var Vdot={
 var PCT={E_SLOW:0.62,E_FAST:0.74,M:0.81,T:0.88,I:0.98,R:1.06};
 var ELITE_MIN_SECONDS = {1500:206, 1609.344:223, 3000:440, 5000:755, 10000:1571, 21097.5:3480, 42195:7235};
 
-/* ============================ TIME INPUT ============================ */
-/* Mask digits string into HH:MM:SS with auto-colons
-   — colon only inserted if the NEXT segment has digits
-*/
 function maskTimeDigits(digits){
   if (!digits) return '';
   var hh = digits.substring(0, Math.min(2, digits.length));
@@ -645,7 +624,6 @@ function maskTimeDigits(digits){
   if (ss) out += ':' + ss;
   return out;
 }
-/* Read the field — returns { seconds, empty, incomplete, invalid, message } */
 function readTimeField(id){
   var el = document.getElementById(id);
   if (!el) return { seconds: null, empty: true, incomplete: false, invalid: false };
@@ -658,22 +636,13 @@ function readTimeField(id){
   var h = parseInt(digits.substring(0, 2), 10);
   var m = parseInt(digits.substring(2, 4), 10);
   var s = parseInt(digits.substring(4, 6), 10);
-  if (h > 9){
-    return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Hours must be 00–09' };
-  }
-  if (m > 59){
-    return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Minutes must be 0–59' };
-  }
-  if (s > 59){
-    return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Seconds must be 0–59' };
-  }
+  if (h > 9)  return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Hours must be 00–09' };
+  if (m > 59) return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Minutes must be 0–59' };
+  if (s > 59) return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Seconds must be 0–59' };
   var total = h*3600 + m*60 + s;
-  if (total <= 0){
-    return { seconds: null, empty: true, incomplete: false, invalid: false };
-  }
+  if (total <= 0) return { seconds: null, empty: true, incomplete: false, invalid: false };
   return { seconds: total, empty: false, incomplete: false, invalid: false };
 }
-/* Write seconds into field */
 function writeTimeField(id, sec){
   var el = document.getElementById(id);
   if (!el) return;
@@ -685,14 +654,14 @@ function writeTimeField(id, sec){
   if (m === 60){ m = 0; h += 1; }
   el.value = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
 }
-/* Setup masking + backspace + focus behavior */
-function setupTimeField(id){
+function setupTimeField(id, hintId){
   var el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('input', function(e){
     var digits = e.target.value.replace(/\D/g, '').slice(0, 6);
     e.target.value = maskTimeDigits(digits);
     try { e.target.setSelectionRange(e.target.value.length, e.target.value.length); } catch(err){}
+    if (hintId) updateTimeFieldDisplay(id, hintId);
     updateInputState();
   });
   el.addEventListener('keydown', function(e){
@@ -703,6 +672,7 @@ function setupTimeField(id){
         digits = digits.substring(0, digits.length - 1);
         el.value = maskTimeDigits(digits);
         try { el.setSelectionRange(el.value.length, el.value.length); } catch(err){}
+        if (hintId) updateTimeFieldDisplay(id, hintId);
         updateInputState();
       }
     }
@@ -717,31 +687,15 @@ function updateTimeFieldDisplay(id, hintId){
   var hintEl = document.getElementById(hintId);
   var fieldEl = el ? el.closest('.field') : null;
   if (!el || !hintEl || !fieldEl) return;
-  fieldEl.classList.remove('incomplete', 'invalid', 'ready');
-  hintEl.classList.remove('incomplete', 'ready', 'error');
+  fieldEl.classList.remove('incomplete','invalid','ready');
+  hintEl.classList.remove('incomplete','ready','error');
   var res = readTimeField(id);
-  if (res.empty){
-    hintEl.textContent = 'Enter HH:MM:SS — type all 6 digits';
-    return;
-  }
-  if (res.incomplete){
-    fieldEl.classList.add('incomplete');
-    hintEl.classList.add('incomplete');
-    hintEl.textContent = res.message;
-    return;
-  }
-  if (res.invalid){
-    fieldEl.classList.add('invalid');
-    hintEl.classList.add('error');
-    hintEl.textContent = res.message;
-    return;
-  }
-  fieldEl.classList.add('ready');
-  hintEl.classList.add('ready');
-  hintEl.textContent = '✓ Ready';
+  if (res.empty){ hintEl.textContent = 'Enter HH:MM:SS — type all 6 digits'; return; }
+  if (res.incomplete){ fieldEl.classList.add('incomplete'); hintEl.classList.add('incomplete'); hintEl.textContent = res.message; return; }
+  if (res.invalid){ fieldEl.classList.add('invalid'); hintEl.classList.add('error'); hintEl.textContent = res.message; return; }
+  fieldEl.classList.add('ready'); hintEl.classList.add('ready'); hintEl.textContent = '✓ Ready';
 }
 
-/* ============================ FMT ============================ */
 function fmtTime(sec,opt){
   opt=opt||{};
   if(!isFinite(sec)||sec<=0)return '—';
@@ -750,14 +704,29 @@ function fmtTime(sec,opt){
   if(opt.alwaysMin||m>0)return m+':'+(s<10?'0':'')+s;
   return s+'s';
 }
+function parseTime(str, distanceM){
+  if(!str||!String(str).trim())return null;
+  var trimmed = String(str).trim();
+  if (trimmed.indexOf(':') >= 0){
+    var parts = trimmed.split(':').map(Number);
+    for(var i=0;i<parts.length;i++){if(isNaN(parts[i]))return null;}
+    if(parts.length===2)return parts[0]*60+parts[1];
+    if(parts.length===3)return parts[0]*3600+parts[1]*60+parts[2];
+    return null;
+  }
+  var num = Number(trimmed);
+  if (isNaN(num) || num <= 0) return null;
+  if (distanceM && distanceM >= 3000) return num * 60;
+  return num;
+}
 function paceKmShort(sec){var t=Math.round(sec);return Math.floor(t/60)+':'+(t%60<10?'0':'')+(t%60);}
 function paceKm(sec){return paceKmShort(sec)+'/km';}
 function pace400(sec){var t=Math.round(sec);return Math.floor(t/60)+':'+(t%60<10?'0':'')+(t%60);}
 function findRaceTime(vdot,dM){var lo=60,hi=60*300;for(var i=0;i<60;i++){var mid=(lo+hi)/2;if(Vdot.fromRace(dM,mid)>vdot)lo=mid;else hi=mid;}return (lo+hi)/2;}
 function isMarathonDistance(g){ return parseFloat(g) === 42195; }
 function isHalfMarathon(g){ return parseFloat(g) === 21097.5; }
+function stripHtml(s){ return String(s||'').replace(/<[^>]+>/g,''); }
 
-/* ============================ VALIDATION ============================ */
 function validateRaceInput(distanceM, timeSec){
   if (!distanceM || !timeSec || timeSec <= 0){
     return {valid: false, reason: 'Please enter both a race distance and a race time.'};
@@ -783,28 +752,6 @@ function validateRaceInput(distanceM, timeSec){
   return {valid: true, vdot: vdot};
 }
 
-/* ============================ CAPACITY ============================ */
-function computeCapacity(goalDist, trainingDays){
-  var isMar = isMarathonDistance(goalDist);
-  var isHM = isHalfMarathon(goalDist);
-  var longMax, otherMax;
-  if (isMar){ longMax = 35; otherMax = 16; }
-  else if (isHM){ longMax = 20; otherMax = 14; }
-  else { longMax = 15; otherMax = 11; }
-  return longMax + otherMax * Math.max(0, trainingDays - 1);
-}
-function findAdjacentRestDay(longDay, restDays){
-  var before = (longDay - 1 + 7) % 7;
-  if (restDays.has(before)) return before;
-  var after = (longDay + 1) % 7;
-  if (restDays.has(after)) return after;
-  for (var d = 0; d < 7; d++){
-    if (d !== longDay && restDays.has(d)) return d;
-  }
-  return null;
-}
-
-/* ============================ PHASES ============================ */
 function computePhaseBoundaries(totalWeeks){
   if (totalWeeks <= 2) return {I: totalWeeks - 1, II: totalWeeks - 1, III: totalWeeks - 1, IV: totalWeeks, phaseIVStart: totalWeeks};
   if (totalWeeks <= 4){
@@ -828,7 +775,6 @@ function computePhaseBoundaries(totalWeeks){
   return {I: phaseIWeeks, II: phaseIWeeks + phaseIIWeeks, III: phaseIWeeks + phaseIIWeeks + phaseIIIWeeks, IV: totalWeeks, phaseIVStart: phaseIWeeks + phaseIIWeeks + phaseIIIWeeks + 1};
 }
 
-/* ============================ ANALYSIS ============================ */
 var RACE_META={'5000':{km:5,name:'5K'},'10000':{km:10,name:'10K'},'21097.5':{km:21.0975,name:'half marathon'},'42195':{km:42.195,name:'marathon'}};
 function minAdequateVolume(goalDist,targetVdot){
   var key = String(goalDist);
@@ -915,7 +861,6 @@ function suggestPeakTiers(goalDist,currentKm){
   return list.map(function(t){return {name:t.name,km:Math.max(t.km,currentKm),note:t.note};});
 }
 
-/* ============================ WORKOUTS ============================ */
 var DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function chooseTTDistance(goalDist, peakKm){
   var goalTargets = {'800':1000,'1500':1500,'1609.344':1609,'3000':3000,'5000':5000,'10000':5000,'21097.5':10000,'42195':10000};
@@ -991,7 +936,6 @@ function tSession(caps,weeklyKm,v){
 }
 function goalPaceRehearsal(goalPaceSecPerKm){return {zone:'T',title:'3 × 2 km @ goal pace',totalKm:9,detail:'Target '+paceKm(goalPaceSecPerKm)+' · 3 min jogs',isQ:true};}
 
-/* ============================ PADDING ============================ */
 function padEasyRuns(days, weekLen, targetKm, longRunKm){
   if (weekLen < 5) return;
   var currentKm = 0;
@@ -1055,7 +999,6 @@ function padQualitySessions(days, weekLen, targetKm, longRunKm){
   }
 }
 
-/* ============================ MAIN GENERATOR ============================ */
 function generatePlan(cfg){
   var weeks=cfg.weeks,peakKm=cfg.peakKm,currentKm=cfg.currentKm||peakKm*0.6;
   var paceVdot = cfg.paceVdot || cfg.targetVdot || 40;
@@ -1227,15 +1170,14 @@ function generatePlan(cfg){
     var totalKm=0;
     for(var i=0;i<7;i++){var d=days[i];if(d&&isFinite(d.totalKm))totalKm+=d.totalKm;}
     out.push({
-      number:w, phase:phase, totalKm:totalKm, days:days, paces:pazes,
+      number:w, phase:phase, totalKm:totalKm, days:days, paces:paces,
       isTT:isTTWeek, isSim:isSimWeek, isCutback:isCutback, isModReduced:isModReduced,
       startDate:cfg.startDate, weekLen:weekLen
     });
   }
-  return {weeks:out,caps:caps,paces:pazes,rehearsalNeeded:rehearsalNeeded,ttWeek:ttWeek,ttDistance:ttDistance,ttDistanceLabel:ttDistanceLabel,startDate:cfg.startDate,bounds:bounds};
+  return {weeks:out,caps:caps,paces:paces,rehearsalNeeded:rehearsalNeeded,ttWeek:ttWeek,ttDistance:ttDistance,ttDistanceLabel:ttDistanceLabel,startDate:cfg.startDate,bounds:bounds};
 }
 
-/* ============================ BEGINNER ============================ */
 var BEGINNER_12 = [
   {sessions:['walk20','rw_1_1_x6','walk30']},
   {sessions:['walk20','rw_1_1_x8','walk35']},
@@ -1329,7 +1271,6 @@ function generateBeginnerPlan(cfg){
   return { weeks: out, startDate: cfg.startDate, isBeginner: true };
 }
 
-/* ============================ PURPOSE ============================ */
 function purposeFor(day, isBeginner){
   if (!day) return '';
   if (day.isBeginner) {
@@ -1379,7 +1320,6 @@ function inlinePace(day, paces, isBeginner){
 }
 function escapeHtml(s){if(s===null||s===undefined)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-/* ============================ VERDICT ============================ */
 function renderVerdict(a,userName,cfg){
   var safeName = escapeHtml(userName);
   var html='';
@@ -1433,7 +1373,6 @@ function renderVerdict(a,userName,cfg){
 }
 function checkItem(name,value,detail,cls){return '<div class="check '+cls+'"><div class="check-name">'+name+'</div><div class="check-value">'+value+'</div><div class="check-detail">'+detail+'</div></div>';}
 
-/* ============================ RENDER ============================ */
 function paceRow(zone,name,primary,secondary){
   return '<div class="pace-row"><span class="zone-badge z-'+zone+'">'+zone+'</span><div><div class="pace-name">'+name+'</div><div class="pace-values"><span class="primary">'+primary+'</span>'+(secondary?'<span class="secondary">'+secondary+'</span>':'')+'</div></div></div>';
 }
@@ -1537,14 +1476,6 @@ function renderPlan(result,meta,userName){
     if(weeks[i].totalKm>peakKm)peakKm=weeks[i].totalKm;
   }
   var html='';
-  if (meta.showInjuryWarning){
-    var avgPerSession = (meta.peakKmTarget && meta.trainingDays) ? (meta.peakKmTarget / meta.trainingDays).toFixed(1) : null;
-    html+='<div class="injury-banner no-print"><span class="ib-icon">⚠</span><div><strong>Schedule at the edge of safe training.</strong> ';
-    if (avgPerSession){
-      html+='Your peak of '+meta.peakKmTarget+' km on '+meta.trainingDays+' days averages ~'+avgPerSession+' km per session. ';
-    }
-    html+='Watch for early injury signals — persistent soreness, poor sleep, elevated resting heart rate.</div></div>';
-  }
   html+='<div class="card"><div class="plan-header">';
   html+='<div class="name-display">'+escapeHtml(userName)+"'s plan</div>";
   html+='<h2>'+meta.eventLabel+'</h2>';
@@ -1591,17 +1522,14 @@ function ttSelectOptions(selectedMeters){
   return html;
 }
 
-/* ============================ STATE ============================ */
 var state={
   analysis:null,plan:null,planOriginal:null,planMeta:null,cfg:null,
   allRestDays:new Set(),longDay:6,currentVdotOverride:null,userName:'',
   originalGoalTime:null,adjustedGoalTime:null,
   feelMode:null,feelDays:0,feelStartDate:null,
-  planType:'standard',beginnerRestDays:new Set(),beginnerLongDay:6,
-  showInjuryWarning:false
+  planType:'standard',beginnerRestDays:new Set(),beginnerLongDay:6
 };
 
-/* ============================ READ CONFIG ============================ */
 function readCfgStandard(){
   var rawPeak=document.getElementById('peakKm').value;
   var rawCur=document.getElementById('currentKm').value;
@@ -1616,10 +1544,12 @@ function readCfgStandard(){
     raceDate:document.getElementById('raceDate').value||'',
     longDay:parseInt(document.getElementById('longRunDay').value),
     curDist:curDist, curTime:curTimeRes.seconds,
-    curTimeEmpty:curTimeRes.empty, curTimeIncomplete:curTimeRes.incomplete, curTimeInvalid:curTimeRes.invalid,
+    curTimeEmpty:curTimeRes.empty, curTimeIncomplete:curTimeRes.incomplete,
+    curTimeInvalid:curTimeRes.invalid, curTimeMessage:curTimeRes.message||'',
     currentKm:rawCur===''?0:parseFloat(rawCur),
     goalDist:goalDist, goalTime:goalTimeRes.seconds,
-    goalTimeEmpty:goalTimeRes.empty, goalTimeIncomplete:goalTimeRes.incomplete, goalTimeInvalid:goalTimeRes.invalid,
+    goalTimeEmpty:goalTimeRes.empty, goalTimeIncomplete:goalTimeRes.incomplete,
+    goalTimeInvalid:goalTimeRes.invalid, goalTimeMessage:goalTimeRes.message||'',
     peakKm:rawPeak===''?0:parseFloat(rawPeak),
     restDays:state.allRestDays
   };
@@ -1640,8 +1570,6 @@ function readCfgBeginner(){
     restDays:state.beginnerRestDays
   };
 }
-
-/* ============================ VALIDATE ============================ */
 function validateStandard(cfg){
   var missing=[];
   var fieldMap={userName:'field-userName',startDate:'field-startDate',raceDate:'field-raceDate',curDist:'field-curDist',curTime:'field-curTime',currentKm:'field-currentKm',goalDist:'field-goalDist',goalTime:'field-goalTime',peakKm:'field-peakKm'};
@@ -1652,25 +1580,495 @@ function validateStandard(cfg){
   var weeks=computeWeeks(cfg.startDate,cfg.raceDate);
   if(cfg.startDate&&cfg.raceDate&&(!weeks||weeks<2)){missing.push('race date at least 2 weeks after start');markInvalid('field-raceDate');}
   if(!cfg.curDist||isNaN(cfg.curDist)){missing.push('recent race distance');markInvalid('field-curDist');}
-  if(cfg.curTimeIncomplete){missing.push('complete race time (all 6 digits)');markInvalid('field-curTime');}
-  else if(cfg.curTimeInvalid){missing.push('valid race time (check HH:MM:SS)');markInvalid('field-curTime');}
+  if(cfg.curTimeIncomplete){missing.push('race time ('+cfg.curTimeMessage+')');markInvalid('field-curTime');}
+  else if(cfg.curTimeInvalid){missing.push('valid race time ('+cfg.curTimeMessage+')');markInvalid('field-curTime');}
   else if(!cfg.curTime){missing.push('recent race time');markInvalid('field-curTime');}
   else {
     var check1 = validateRaceInput(cfg.curDist, cfg.curTime);
-    if (!check1.valid){missing.push('valid race time ('+check1.reason+')'); markInvalid('field-curTime');}
+    if (!check1.valid){missing.push('valid race time ('+stripHtml(check1.reason)+')'); markInvalid('field-curTime');}
   }
   if(!cfg.currentKm||cfg.currentKm<=0){missing.push('current weekly km');markInvalid('field-currentKm');}
   if(!cfg.goalDist||isNaN(cfg.goalDist)){missing.push('goal distance');markInvalid('field-goalDist');}
-  if(cfg.goalTimeIncomplete){missing.push('complete goal time (all 6 digits)');markInvalid('field-goalTime');}
-  else if(cfg.goalTimeInvalid){missing.push('valid goal time (check HH:MM:SS)');markInvalid('field-goalTime');}
+  if(cfg.goalTimeIncomplete){missing.push('goal time ('+cfg.goalTimeMessage+')');markInvalid('field-goalTime');}
+  else if(cfg.goalTimeInvalid){missing.push('valid goal time ('+cfg.goalTimeMessage+')');markInvalid('field-goalTime');}
   else if(!cfg.goalTime){missing.push('goal time');markInvalid('field-goalTime');}
   else {
     var check2 = validateRaceInput(cfg.goalDist, cfg.goalTime);
-    if (!check2.valid){missing.push('valid goal time ('+check2.reason+')'); markInvalid('field-goalTime');}
+    if (!check2.valid){missing.push('valid goal time ('+stripHtml(check2.reason)+')'); markInvalid('field-goalTime');}
   }
   if(!cfg.peakKm||cfg.peakKm<=0){missing.push('peak weekly km');markInvalid('field-peakKm');}
   return missing;
 }
 function validateBeginner(cfg){
   var missing=[];
-  var fieldMap={userName:'field-userName',bStartDate:'field-bStartDate',bRaceDate:'field-bRaceDate',bAbility:'field-bAbility',bDays:'field-bDays
+  var fieldMap={userName:'field-userName',bStartDate:'field-bStartDate',bRaceDate:'field-bRaceDate',bAbility:'field-bAbility',bDays:'field-bDays',bGoal:'field-bGoal'};
+  for(var key in fieldMap){var el=document.getElementById(fieldMap[key]);if(el)el.classList.remove('invalid');}
+  if(!cfg.userName){missing.push('name');markInvalid('field-userName');}
+  if(!cfg.startDate){missing.push('start date');markInvalid('field-bStartDate');}
+  if(!cfg.raceDate){missing.push('race day');markInvalid('field-bRaceDate');}
+  var weeks=computeWeeks(cfg.startDate,cfg.raceDate);
+  if(cfg.startDate&&cfg.raceDate&&(!weeks||weeks<4)){missing.push('race day at least 4 weeks after start');markInvalid('field-bRaceDate');}
+  if(!cfg.ability){missing.push('current ability');markInvalid('field-bAbility');}
+  if(!cfg.goal){missing.push('goal');markInvalid('field-bGoal');}
+  return missing;
+}
+function markInvalid(id){var el=document.getElementById(id);if(el)el.classList.add('invalid');}
+
+function updateWeeksDisplay(){
+  if (state.planType === 'standard'){
+    var s=document.getElementById('startDate').value,r=document.getElementById('raceDate').value;
+    var box=document.getElementById('weeksBox');
+    var weeks=computeWeeks(s,r);
+    if(!s||!r){box.textContent='Set dates to compute';box.className='computed-box empty';return;}
+    if(!weeks||weeks<2){box.textContent='Race must be ≥2 weeks after start';box.className='computed-box empty';return;}
+    box.textContent=weeks+' weeks';box.className='computed-box';
+  } else {
+    var s=document.getElementById('bStartDate').value,r=document.getElementById('bRaceDate').value;
+    var box=document.getElementById('bWeeksBox');
+    var weeks=computeWeeks(s,r);
+    if(!s||!r){box.textContent='Set dates to compute';box.className='computed-box empty';return;}
+    if(!weeks||weeks<4){box.textContent='Race must be ≥4 weeks after start';box.className='computed-box empty';return;}
+    box.textContent=weeks+' weeks';box.className='computed-box';
+  }
+}
+function updateInputState(){
+  updateWeeksDisplay();
+  var missing, btn=document.getElementById('analyzeBtn'), status=document.getElementById('inputStatus');
+  if (state.planType === 'standard'){
+    var cfg = readCfgStandard();
+    missing = validateStandard(cfg);
+  } else {
+    var cfgB = readCfgBeginner();
+    missing = validateBeginner(cfgB);
+  }
+  if(missing.length===0){btn.disabled=false;btn.textContent='Analyze & generate plan →';status.className='input-status ready';status.textContent='All inputs received — ready to generate.';}
+  else {btn.disabled=true;btn.textContent='Fill all fields →';status.className='input-status missing';status.textContent='Still needed: '+missing.join(', ')+'.';}
+}
+function runAnalysis(){ if (state.planType === 'beginner'){ runBeginnerAnalysis(); } else { runStandardAnalysis(); } }
+function runStandardAnalysis(){
+  var cfg=readCfgStandard();
+  var missing=validateStandard(cfg);
+  if(missing.length>0){updateInputState();return;}
+  var weeks=computeWeeks(cfg.startDate,cfg.raceDate);
+  var raceIdx=raceDayIndexInFinalWeek(cfg.startDate,cfg.raceDate,weeks);
+  cfg.weeks=weeks; cfg.raceIdx=raceIdx;
+  state.cfg=cfg; state.userName=cfg.userName; state.longDay=cfg.longDay;
+  state.originalGoalTime=cfg.goalTime; state.adjustedGoalTime=cfg.goalTime;
+  state.currentVdotOverride=null;
+  var a=analyze(cfg);
+  state.analysis=a;
+  var planCfg={weeks:cfg.weeks,peakKm:cfg.peakKm,currentKm:cfg.currentKm,paceVdot:a.currentVdot,goalDist:cfg.goalDist,goalTime:cfg.goalTime,restDays:state.allRestDays,longDay:state.longDay,startDate:cfg.startDate,raceIdx:raceIdx};
+  state.plan=generatePlan(planCfg);
+  state.planOriginal=JSON.parse(JSON.stringify(state.plan));
+  a.ttWeekText=state.plan.ttWeek || '—';
+  document.getElementById('verdict').innerHTML=renderVerdict(a,cfg.userName,cfg);
+  var keepBtn=document.getElementById('keepGoalBtn');
+  var useFasterBtn=document.getElementById('useFasterBtn');
+  if(keepBtn)keepBtn.addEventListener('click',function(){ document.getElementById('verdict').innerHTML=''; });
+  if(useFasterBtn)useFasterBtn.addEventListener('click',function(){
+    writeTimeField('goalTime', a.suggestedGoalTime);
+    updateTimeFieldDisplay('goalTime','goalTimeHint');
+    updateInputState();
+    runStandardAnalysis();
+  });
+  var raceDateObj=parseLocalDate(cfg.raceDate); var startDateObj=parseLocalDate(cfg.startDate);
+  state.planMeta={
+    eventLabel:RACE_META[String(cfg.goalDist)].name.charAt(0).toUpperCase()+RACE_META[String(cfg.goalDist)].name.slice(1)+' — goal '+fmtTime(cfg.goalTime),
+    goalTimeStr:fmtTime(cfg.goalTime),
+    subtitle:'Generated with Daniels\u2019 VDOT system · '+weeks+' weeks · '+RACE_META[String(cfg.goalDist)].name+' training',
+    currentVdot:a.currentVdot, targetVdot:a.targetVdot,
+    currentAbilityStr:fmtTime(findRaceTime(a.currentVdot,cfg.goalDist)),
+    raceDateStr:fmtDateLong(raceDateObj), firstDayStr:fmtDateLong(startDateObj),
+    peakKm:cfg.peakKm, longRunDay:DAY_NAMES[cfg.longDay]+'s'
+  };
+  document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
+  if (state.plan.ttWeek){
+    document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
+    setupTimeField('ttTime');
+  }
+  updateFeelNote();
+  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function runBeginnerAnalysis(){
+  var cfg = readCfgBeginner();
+  var missing = validateBeginner(cfg);
+  if(missing.length>0){updateInputState();return;}
+  var weeks = computeWeeks(cfg.startDate, cfg.raceDate);
+  var raceIdx = raceDayIndexInFinalWeek(cfg.startDate, cfg.raceDate, weeks);
+  cfg.weeks = weeks; cfg.raceIdx = raceIdx;
+  cfg.goalLabel = cfg.goal==='5k'?'5K':(cfg.goal==='10k'?'10K':'Half marathon');
+  state.cfg = cfg; state.userName = cfg.userName; state.longDay = cfg.longDay;
+  state.analysis = null;
+  var planResult = generateBeginnerPlan(cfg);
+  state.plan = planResult;
+  state.planOriginal = JSON.parse(JSON.stringify(planResult));
+  document.getElementById('verdict').innerHTML = '';
+  var raceDateObj = parseLocalDate(cfg.raceDate);
+  var startDateObj = parseLocalDate(cfg.startDate);
+  state.planMeta = {
+    eventLabel: 'Beginner plan — goal: finish a '+cfg.goalLabel,
+    goalTimeStr: '', subtitle: 'Build from walking and run/walk intervals to continuous running · '+weeks+' weeks',
+    startingLevel: cfg.abilityLabel, daysPerWeek: cfg.daysPerWeek,
+    raceDateStr: fmtDateLong(raceDateObj), firstDayStr: fmtDateLong(startDateObj),
+    longRunDay: DAY_NAMES[cfg.longDay]+'s', peakKm: 0
+  };
+  document.getElementById('plan').innerHTML = renderPlan(planResult, state.planMeta, state.userName);
+  updateFeelNote();
+  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function handleRecalibrate(){
+  var dist=parseFloat(document.getElementById('ttDistance').value);
+  var tRes = readTimeField('ttTime');
+  var t = tRes.seconds;
+  if (tRes.incomplete){ alert('TT time needs all 6 digits (HH:MM:SS).'); return; }
+  if (tRes.invalid){ alert('TT time error: '+tRes.message+'.'); return; }
+  if(!t||t<=0){alert('Enter a valid TT time (e.g. 22:10).');return;}
+  if(!state.plan.ttWeek){alert('No time trial scheduled in this plan.');return;}
+  var check = validateRaceInput(dist, t);
+  if (!check.valid){ alert(stripHtml(check.reason)); return; }
+  var newVdot=Vdot.fromRace(dist,t);
+  state.currentVdotOverride=newVdot;
+  var ttWeek=state.plan.ttWeek;
+  var oldPlan=state.plan, oldOriginal=state.planOriginal, cfg=state.cfg;
+  var savedFeelMode = state.feelMode, savedFeelDays = state.feelDays, savedFeelStartDate = state.feelStartDate;
+  var newResult=generatePlan({
+    weeks:cfg.weeks, peakKm:cfg.peakKm, currentKm:cfg.currentKm,
+    paceVdot:newVdot, goalDist:cfg.goalDist, goalTime:state.adjustedGoalTime,
+    restDays:state.allRestDays, longDay:state.longDay,
+    startDate:cfg.startDate, raceIdx:cfg.raceIdx
+  });
+  for (var i = 0; i < ttWeek-1; i++){ if (oldPlan.weeks[i]) newResult.weeks[i] = oldPlan.weeks[i]; }
+  state.plan = newResult;
+  var newOriginal = JSON.parse(JSON.stringify(newResult));
+  for (var i = 0; i < ttWeek-1; i++){ if (oldOriginal.weeks[i]) newOriginal.weeks[i] = JSON.parse(JSON.stringify(oldOriginal.weeks[i])); }
+  state.planOriginal = newOriginal;
+  if (savedFeelMode && savedFeelStartDate){
+    applyFeelingAdjustment(state.plan, savedFeelMode, savedFeelDays, savedFeelStartDate);
+    state.feelMode = savedFeelMode; state.feelDays = savedFeelDays; state.feelStartDate = savedFeelStartDate;
+  }
+  var remainingWeeks=cfg.weeks-ttWeek;
+  var extraGain=realisticGain(cfg.peakKm,minAdequateVolume(cfg.goalDist,newVdot),Math.max(remainingWeeks,1))*(remainingWeeks/8);
+  var projectedAtRace=newVdot+Math.max(0,extraGain*0.5);
+  var projectedTime=findRaceTime(projectedAtRace,cfg.goalDist);
+  state.planMeta.targetVdot=newVdot;
+  state.planMeta.subtitle='Recalibrated after Week '+ttWeek+' TT — new VDOT '+newVdot.toFixed(1)+' ('+fmtTime(t)+' @ '+dist+'m)';
+  document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
+  var goalCheckHtml=renderGoalCheck(projectedTime,projectedAtRace,newVdot);
+  document.getElementById('plan').insertAdjacentHTML('afterbegin',goalCheckHtml);
+  var keepBtn2=document.getElementById('keepGoalBtn2');
+  var acceptBtn=document.getElementById('acceptGoalBtn');
+  var resetBtn=document.getElementById('resetGoalBtn');
+  if(keepBtn2)keepBtn2.addEventListener('click',function(){dismissGoalCheck();});
+  if(acceptBtn)acceptBtn.addEventListener('click',function(){
+    writeTimeField('goalTime', projectedTime);
+    updateTimeFieldDisplay('goalTime','goalTimeHint');
+    updateInputState();
+    runStandardAnalysis();
+  });
+  if(resetBtn)resetBtn.addEventListener('click',function(){
+    var input=prompt('Enter your new goal time (HH:MM:SS):',fmtTime(state.originalGoalTime));
+    if(input){
+      var t2=parseTime(input, state.cfg.goalDist);
+      if(t2&&t2>0){
+        writeTimeField('goalTime', t2);
+        updateTimeFieldDisplay('goalTime','goalTimeHint');
+        updateInputState();
+        runStandardAnalysis();
+      }
+    }
+  });
+  if (state.plan.ttWeek){
+    document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
+    setupTimeField('ttTime');
+  }
+  updateFeelNote();
+  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function renderGoalCheck(projectedTime,projectedVdot,currentVdot){
+  var originalTime=state.originalGoalTime;
+  var projectedIsFaster=projectedTime<originalTime;
+  var gapSec=Math.abs(projectedTime-originalTime);
+  var gapMin=Math.floor(gapSec/60); var gapSecRem=Math.round(gapSec%60);
+  var gapStr=gapMin+':'+(gapSecRem<10?'0':'')+gapSecRem;
+  var message;
+  if(projectedIsFaster||gapSec<60){ message='Your time trial shows you\'re on track (or ahead) for your original goal of '+fmtTime(originalTime)+'. Keep going as planned.'; }
+  else { message='Your time trial shows fitness at <strong>VDOT '+currentVdot.toFixed(1)+'</strong>. With the remaining weeks, your realistic finish is closer to <strong>'+fmtTime(projectedTime)+'</strong> — about '+gapStr+' slower than your original goal of '+fmtTime(originalTime)+'. <strong>What would you like to do?</strong>'; }
+  return '<div class="goal-check no-print" id="goalCheck"><h3>Goal check — after the time trial</h3><p>'+message+'</p><div class="compare"><div class="compare-item"><div class="ci-label">Original goal</div><div class="ci-value">'+fmtTime(originalTime)+'</div><div class="ci-sub">Entered at plan start</div></div><div class="compare-item"><div class="ci-label">Projected at race day</div><div class="ci-value">'+fmtTime(projectedTime)+'</div><div class="ci-sub">Based on time trial + remaining weeks</div></div></div><div class="actions"><button class="btn primary" id="keepGoalBtn2">Keep original goal '+fmtTime(originalTime)+'</button><button class="btn green" id="acceptGoalBtn">Accept realistic goal '+fmtTime(projectedTime)+'</button><button class="btn" id="resetGoalBtn">Adjust goal manually</button></div></div>';
+}
+function dismissGoalCheck(){ var panel=document.getElementById('goalCheck'); if(!panel)return; panel.remove(); }
+
+function refreshRestDaysUI(){
+  var longDay=parseInt(document.getElementById('longRunDay').value);
+  state.longDay=longDay;
+  var labels=document.querySelectorAll('#restDays label');
+  for(var i=0;i<labels.length;i++){
+    var lbl=labels[i]; var d=parseInt(lbl.getAttribute('data-d'));
+    if(d===longDay){lbl.classList.add('disabled');lbl.classList.remove('on');state.allRestDays.delete(d);}
+    else {lbl.classList.remove('disabled');}
+  }
+}
+function refreshBeginnerRestDaysUI(){
+  var longDay=parseInt(document.getElementById('bLongRunDay').value);
+  state.beginnerLongDay=longDay;
+  var labels=document.querySelectorAll('#bRestDays label');
+  for(var i=0;i<labels.length;i++){
+    var lbl=labels[i]; var d=parseInt(lbl.getAttribute('data-d'));
+    if(d===longDay){lbl.classList.add('disabled');lbl.classList.remove('on');state.beginnerRestDays.delete(d);}
+    else {lbl.classList.remove('disabled');}
+  }
+}
+var restLabels=document.querySelectorAll('#restDays label');
+for(var i=0;i<restLabels.length;i++){
+  (function(lbl){
+    lbl.addEventListener('click',function(e){
+      e.preventDefault();
+      var d=parseInt(lbl.getAttribute('data-d'));
+      if(d===state.longDay)return;
+      if(state.allRestDays.has(d))state.allRestDays.delete(d);else state.allRestDays.add(d);
+      if(state.allRestDays.has(d))lbl.classList.add('on');else lbl.classList.remove('on');
+    });
+  })(restLabels[i]);
+}
+var bRestLabels=document.querySelectorAll('#bRestDays label');
+for(var i=0;i<bRestLabels.length;i++){
+  (function(lbl){
+    lbl.addEventListener('click',function(e){
+      e.preventDefault();
+      var d=parseInt(lbl.getAttribute('data-d'));
+      if(d===state.beginnerLongDay)return;
+      if(state.beginnerRestDays.has(d))state.beginnerRestDays.delete(d);else state.beginnerRestDays.add(d);
+      if(state.beginnerRestDays.has(d))lbl.classList.add('on');else lbl.classList.remove('on');
+    });
+  })(bRestLabels[i]);
+}
+document.getElementById('longRunDay').addEventListener('change',function(){refreshRestDaysUI();updateInputState();});
+document.getElementById('bLongRunDay').addEventListener('change',function(){refreshBeginnerRestDaysUI();updateInputState();});
+
+document.querySelectorAll('.plan-tab').forEach(function(tab){
+  tab.addEventListener('click', function(){
+    document.querySelectorAll('.plan-tab').forEach(function(t){ t.classList.remove('on'); });
+    tab.classList.add('on');
+    state.planType = tab.getAttribute('data-ptype');
+    if (state.planType === 'standard'){
+      document.getElementById('standardInputs').style.display = 'block';
+      document.getElementById('beginnerInputs').style.display = 'none';
+    } else {
+      document.getElementById('standardInputs').style.display = 'none';
+      document.getElementById('beginnerInputs').style.display = 'block';
+    }
+    updateInputState();
+  });
+});
+
+var popover=null;
+document.getElementById('suggestBtn').addEventListener('click',function(e){
+  e.stopPropagation();
+  if(popover){popover.remove();popover=null;return;}
+  var goalDist=document.getElementById('goalDist').value;
+  var curKm=parseFloat(document.getElementById('currentKm').value)||0;
+  if(!goalDist){alert('Select a goal distance first.');return;}
+  if(!curKm||curKm<=0){alert('Enter your current weekly km first.');return;}
+  var tiers=suggestPeakTiers(goalDist,curKm);
+  popover=document.createElement('div'); popover.className='suggest-popover';
+  var html='<h4>Peak weekly km — suggested</h4><p>Pick a tier that matches your goal.</p>';
+  for(var i=0;i<tiers.length;i++)html+='<div class="tier-row" data-km="'+tiers[i].km+'"><span class="tier-name">'+tiers[i].name+'</span><span class="tier-km">'+tiers[i].km+' km</span><span class="tier-note">'+tiers[i].note+'</span></div>';
+  popover.innerHTML=html;
+  var btn=document.getElementById('suggestBtn'); var rect=btn.getBoundingClientRect();
+  popover.style.position='fixed'; popover.style.top=(rect.bottom+6)+'px';
+  popover.style.left=Math.max(20,rect.left-180)+'px';
+  document.body.appendChild(popover);
+  var rows=popover.querySelectorAll('.tier-row');
+  for(var j=0;j<rows.length;j++){
+    rows[j].addEventListener('click',function(){
+      var km=parseInt(this.getAttribute('data-km'));
+      document.getElementById('peakKm').value=km;
+      popover.remove();popover=null; updateInputState();
+    });
+  }
+});
+document.addEventListener('click',function(){if(popover){popover.remove();popover=null;}});
+
+var feelPanel=document.getElementById('feelPanel');
+var feelHead=document.getElementById('feelHead');
+var feelToggle=document.getElementById('feelToggle');
+var modeButtons=document.querySelectorAll('.mode-card');
+var feelApplyBtn=document.getElementById('feelApply');
+var feelClearBtn=document.getElementById('feelClear');
+var feelNote=document.getElementById('feelNote');
+
+feelHead.addEventListener('click',function(){
+  feelPanel.classList.toggle('collapsed');
+  feelPanel.classList.toggle('open');
+  feelToggle.textContent = feelPanel.classList.contains('open') ? 'close ▴' : 'open ▾';
+});
+modeButtons.forEach(function(btn){
+  btn.addEventListener('click',function(){
+    modeButtons.forEach(function(b){ b.classList.remove('on'); });
+    btn.classList.add('on');
+    state.feelMode = btn.getAttribute('data-mode');
+    feelApplyBtn.disabled = false;
+    updateFeelNote();
+  });
+});
+feelApplyBtn.addEventListener('click',function(){
+  if(!state.feelMode){ alert('Pick a mode first.'); return; }
+  if(!state.planOriginal){ alert('Generate a plan first, then apply.'); return; }
+  if(state.planType === 'beginner'){ alert('The feeling adjuster isn\'t available for beginner plans yet. Just take an extra rest day if you need one.'); return; }
+  var days=parseInt(document.getElementById('feelDays').value);
+  var startSel=document.getElementById('feelStart').value;
+  var startDate;
+  if(startSel==='today'){
+    startDate=new Date(); startDate.setHours(0,0,0,0);
+    var planStart=parseLocalDate(state.cfg.startDate); planStart.setHours(0,0,0,0);
+    if(startDate < planStart) startDate = new Date(planStart);
+  } else {
+    startDate=parseLocalDate(state.cfg.startDate); startDate.setHours(0,0,0,0);
+  }
+  state.feelDays=days; state.feelStartDate=startDate;
+  var adjusted=JSON.parse(JSON.stringify(state.planOriginal));
+  var count=applyFeelingAdjustment(adjusted, state.feelMode, days, startDate);
+  state.plan=adjusted;
+  document.getElementById('plan').innerHTML=renderPlan(adjusted,state.planMeta,state.userName);
+  if (state.plan.ttWeek){
+    document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
+    setupTimeField('ttTime');
+  }
+  updateFeelNote(count);
+  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
+});
+feelClearBtn.addEventListener('click',function(){
+  if(!state.planOriginal) return;
+  state.plan=JSON.parse(JSON.stringify(state.planOriginal));
+  state.feelMode=null; state.feelDays=0; state.feelStartDate=null;
+  modeButtons.forEach(function(b){ b.classList.remove('on'); });
+  feelApplyBtn.disabled=true;
+  document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
+  if (state.plan.ttWeek){
+    document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
+    setupTimeField('ttTime');
+  }
+  updateFeelNote();
+});
+function updateFeelNote(count){
+  if (state.planType === 'beginner'){
+    feelNote.innerHTML = 'Beginner plans don\'t support auto-adjustment. If you need a lighter day, take an extra rest day.';
+    feelApplyBtn.disabled = true;
+    return;
+  }
+  var parts=[];
+  if(state.feelMode){
+    var label = state.feelMode==='fatigue' ? 'Fatigued' : (state.feelMode==='sick' ? 'Sick' : 'Busy');
+    parts.push('Mode: <strong>'+label+'</strong>');
+  }
+  if(count && count > 0){ parts.push(count+' day'+(count===1?'':'s')+' adjusted in the plan below.'); }
+  if(parts.length === 0){ feelNote.textContent = 'Select a mode and click Apply. The adjusted days will be highlighted; other days stay untouched.'; }
+  else { feelNote.innerHTML = parts.join(' · '); }
+}
+function applyFeelingAdjustment(plan, mode, days, startDate){
+  var startT = startDate.getTime();
+  var endDate = new Date(startDate); endDate.setDate(endDate.getDate() + days - 1);
+  var endT = endDate.getTime();
+  var count = 0;
+  var isFirstQOfWeek = {};
+  for (var w = 0; w < plan.weeks.length; w++){
+    var week = plan.weeks[w];
+    isFirstQOfWeek[week.number] = true;
+    var weekDates = computeWeekDates(plan.startDate, week.number);
+    for (var d = 0; d < weekDates.length; d++){
+      var thisDate = new Date(weekDates[d]); thisDate.setHours(0,0,0,0);
+      var thisT = thisDate.getTime();
+      if (thisT < startT) continue;
+      if (thisT > endT) continue;
+      var day = week.days[d];
+      if (!day) continue;
+      if (day.zone === 'race') continue;
+      var adj = adjustWorkout(day, mode, isFirstQOfWeek[week.number]);
+      if (adj){
+        day.originalTitle = day.title; day.originalZone = day.zone; day.originalTotalKm = day.totalKm;
+        day.adjusted = true; day.adjustMode = mode;
+        day.zone = adj.zone; day.title = adj.title; day.detail = adj.detail || ''; day.totalKm = adj.totalKm;
+        day.isQ = false; day.qRank = null; day.isLongRun = false; day.isSim = false;
+        if (day.originalZone === 'T' || day.originalZone === 'I' || day.originalZone === 'R' || day.originalZone === 'M' || day.originalZone === 'tt') { isFirstQOfWeek[week.number] = false; }
+        count++;
+      }
+    }
+  }
+  for (var w = 0; w < plan.weeks.length; w++){
+    var tot = 0;
+    for (var d = 0; d < plan.weeks[w].days.length; d++){ var dd = plan.weeks[w].days[d]; if (dd && isFinite(dd.totalKm)) tot += dd.totalKm; }
+    plan.weeks[w].totalKm = tot;
+  }
+  return count;
+}
+function adjustWorkout(day, mode, isFirstQOfWeek){
+  var z = day.zone;
+  if (z === 'rest' || z === 'race') return null;
+  var isQuality = (z === 'T' || z === 'I' || z === 'R' || z === 'M' || z === 'tt');
+  if (mode === 'sick'){ return { zone: 'rest', title: 'Rest / walk only', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 0 }; }
+  if (mode === 'fatigue'){
+    if (day.isLongRun) return { zone: 'E', title: 'Eased long run', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: Math.max(6, Math.round(day.totalKm * 0.6)) };
+    if (isQuality){ if (z === 'T') return { zone: 'T', title: 'Short T session', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 5 }; return { zone: 'E', title: '25 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 4 }; }
+    return { zone: 'E', title: '20 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 3 };
+  }
+  if (mode === 'busy'){
+    if (day.isLongRun) return { zone: 'E', title: '40 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 7 };
+    if (isQuality){
+      if (isFirstQOfWeek){ var shortened = Math.max(5, Math.round(day.totalKm * 0.55)); return { zone: z, title: 'Short ' + z, detail: 'Was: ' + (day.originalTitle || day.title), totalKm: shortened }; }
+      return { zone: 'E', title: '25 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 4 };
+    }
+    return { zone: 'E', title: '25 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 4 };
+  }
+  return null;
+}
+
+setupTimeField('curTime','curTimeHint');
+setupTimeField('goalTime','goalTimeHint');
+
+var inputIds=['userName','startDate','raceDate','curDist','currentKm','goalDist','peakKm','bStartDate','bRaceDate','bAbility','bDays','bGoal'];
+for(var i=0;i<inputIds.length;i++){
+  (function(id){
+    var el=document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input',updateInputState);
+    el.addEventListener('change',updateInputState);
+  })(inputIds[i]);
+}
+document.getElementById('analyzeBtn').addEventListener('click',runAnalysis);
+document.getElementById('printBtn').addEventListener('click',function(){window.print();});
+
+function showToast(msg){
+  var toast=document.getElementById('copyToast');
+  toast.textContent=msg; toast.classList.add('show');
+  setTimeout(function(){toast.classList.remove('show');},2000);
+}
+document.getElementById('copyEmailBtn').addEventListener('click',function(){
+  var email=document.getElementById('feedbackEmail').textContent.trim();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(email).then(function(){showToast('Email address copied');}).catch(function(){
+      var ta=document.createElement('textarea');
+      ta.value=email; ta.style.position='fixed'; ta.style.left='-9999px';
+      document.body.appendChild(ta); ta.select();
+      try{document.execCommand('copy');showToast('Email address copied');}catch(e){showToast('Copy failed — please note down: '+email);}
+      document.body.removeChild(ta);
+    });
+  } else {
+    var ta=document.createElement('textarea');
+    ta.value=email; ta.style.position='fixed'; ta.style.left='-9999px';
+    document.body.appendChild(ta); ta.select();
+    try{document.execCommand('copy');showToast('Email address copied');}catch(e){showToast('Copy failed — please note down: '+email);}
+    document.body.removeChild(ta);
+  }
+});
+document.getElementById('feedbackLink').addEventListener('click',function(){
+  setTimeout(function(){
+    var email=document.getElementById('feedbackEmail').textContent.trim();
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(email).catch(function(){});
+  }, 100);
+});
+
+refreshRestDaysUI();
+refreshBeginnerRestDaysUI();
+updateInputState();
+</script>
+</body>
+</html>
