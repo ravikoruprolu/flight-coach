@@ -51,7 +51,6 @@
   .field > input:focus,.field > select:focus{outline:none;border-color:var(--text);box-shadow:0 0 0 3px rgba(23,23,28,.08)}
   .field > input::placeholder{color:#b0b0bb}
   .field.invalid > input,.field.invalid > select{border-color:var(--red);background:#fef2f2}
-  /* Single-field time input */
   .time-field{
     width:100%;font:inherit;font-size:14px;padding:9px 12px;border-radius:8px;
     border:1px solid var(--border);background:var(--surface);color:var(--text);
@@ -631,7 +630,9 @@ var PCT={E_SLOW:0.62,E_FAST:0.74,M:0.81,T:0.88,I:0.98,R:1.06};
 var ELITE_MIN_SECONDS = {1500:206, 1609.344:223, 3000:440, 5000:755, 10000:1571, 21097.5:3480, 42195:7235};
 
 /* ============================ TIME INPUT ============================ */
-/* Mask digits string into HH:MM:SS with auto-colons */
+/* Mask digits string into HH:MM:SS with auto-colons
+   — colon only inserted if the NEXT segment has digits
+*/
 function maskTimeDigits(digits){
   if (!digits) return '';
   var hh = digits.substring(0, Math.min(2, digits.length));
@@ -640,10 +641,8 @@ function maskTimeDigits(digits){
   var rest2 = rest1.substring(2);
   var ss = rest2.substring(0, Math.min(2, rest2.length));
   var out = hh;
-  if (digits.length >= 2) out += ':';
-  if (mm) out += mm;
-  if (digits.length >= 4) out += ':';
-  if (ss) out += ss;
+  if (mm) out += ':' + mm;
+  if (ss) out += ':' + ss;
   return out;
 }
 /* Read the field — returns { seconds, empty, incomplete, invalid, message } */
@@ -659,6 +658,9 @@ function readTimeField(id){
   var h = parseInt(digits.substring(0, 2), 10);
   var m = parseInt(digits.substring(2, 4), 10);
   var s = parseInt(digits.substring(4, 6), 10);
+  if (h > 9){
+    return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Hours must be 00–09' };
+  }
   if (m > 59){
     return { seconds: null, empty: false, incomplete: false, invalid: true, message: 'Minutes must be 0–59' };
   }
@@ -690,13 +692,11 @@ function setupTimeField(id){
   el.addEventListener('input', function(e){
     var digits = e.target.value.replace(/\D/g, '').slice(0, 6);
     e.target.value = maskTimeDigits(digits);
-    /* Keep cursor at end */
     try { e.target.setSelectionRange(e.target.value.length, e.target.value.length); } catch(err){}
     updateInputState();
   });
   el.addEventListener('keydown', function(e){
     if (e.key === 'Backspace'){
-      /* Prevent default so we can handle digit removal ourselves */
       var digits = el.value.replace(/\D/g, '');
       if (digits.length > 0){
         e.preventDefault();
@@ -706,7 +706,6 @@ function setupTimeField(id){
         updateInputState();
       }
     }
-    /* Block non-numeric printable keys */
     if (e.key.length === 1 && !/[0-9]/.test(e.key) && !e.metaKey && !e.ctrlKey){
       e.preventDefault();
     }
@@ -1654,7 +1653,7 @@ function validateStandard(cfg){
   if(cfg.startDate&&cfg.raceDate&&(!weeks||weeks<2)){missing.push('race date at least 2 weeks after start');markInvalid('field-raceDate');}
   if(!cfg.curDist||isNaN(cfg.curDist)){missing.push('recent race distance');markInvalid('field-curDist');}
   if(cfg.curTimeIncomplete){missing.push('complete race time (all 6 digits)');markInvalid('field-curTime');}
-  else if(cfg.curTimeInvalid){missing.push('valid race time (min and sec 0–59)');markInvalid('field-curTime');}
+  else if(cfg.curTimeInvalid){missing.push('valid race time (check HH:MM:SS)');markInvalid('field-curTime');}
   else if(!cfg.curTime){missing.push('recent race time');markInvalid('field-curTime');}
   else {
     var check1 = validateRaceInput(cfg.curDist, cfg.curTime);
@@ -1663,7 +1662,7 @@ function validateStandard(cfg){
   if(!cfg.currentKm||cfg.currentKm<=0){missing.push('current weekly km');markInvalid('field-currentKm');}
   if(!cfg.goalDist||isNaN(cfg.goalDist)){missing.push('goal distance');markInvalid('field-goalDist');}
   if(cfg.goalTimeIncomplete){missing.push('complete goal time (all 6 digits)');markInvalid('field-goalTime');}
-  else if(cfg.goalTimeInvalid){missing.push('valid goal time (min and sec 0–59)');markInvalid('field-goalTime');}
+  else if(cfg.goalTimeInvalid){missing.push('valid goal time (check HH:MM:SS)');markInvalid('field-goalTime');}
   else if(!cfg.goalTime){missing.push('goal time');markInvalid('field-goalTime');}
   else {
     var check2 = validateRaceInput(cfg.goalDist, cfg.goalTime);
@@ -1674,554 +1673,4 @@ function validateStandard(cfg){
 }
 function validateBeginner(cfg){
   var missing=[];
-  var fieldMap={userName:'field-userName',bStartDate:'field-bStartDate',bRaceDate:'field-bRaceDate',bAbility:'field-bAbility',bDays:'field-bDays',bGoal:'field-bGoal'};
-  for(var key in fieldMap){var el=document.getElementById(fieldMap[key]);if(el)el.classList.remove('invalid');}
-  if(!cfg.userName){missing.push('name');markInvalid('field-userName');}
-  if(!cfg.startDate){missing.push('start date');markInvalid('field-bStartDate');}
-  if(!cfg.raceDate){missing.push('race day');markInvalid('field-bRaceDate');}
-  var weeks=computeWeeks(cfg.startDate,cfg.raceDate);
-  if(cfg.startDate&&cfg.raceDate&&(!weeks||weeks<4)){missing.push('race day at least 4 weeks after start');markInvalid('field-bRaceDate');}
-  if(!cfg.ability){missing.push('current ability');markInvalid('field-bAbility');}
-  if(!cfg.goal){missing.push('goal');markInvalid('field-bGoal');}
-  return missing;
-}
-function markInvalid(id){var el=document.getElementById(id);if(el)el.classList.add('invalid');}
-function updateWeeksDisplay(){
-  if (state.planType === 'standard'){
-    var s=document.getElementById('startDate').value,r=document.getElementById('raceDate').value;
-    var box=document.getElementById('weeksBox');
-    var weeks=computeWeeks(s,r);
-    if(!s||!r){box.textContent='Set dates to compute';box.className='computed-box empty';return;}
-    if(!weeks||weeks<2){box.textContent='Race must be ≥2 weeks after start';box.className='computed-box empty';return;}
-    box.textContent=weeks+' weeks';box.className='computed-box';
-  } else {
-    var s=document.getElementById('bStartDate').value,r=document.getElementById('bRaceDate').value;
-    var box=document.getElementById('bWeeksBox');
-    var weeks=computeWeeks(s,r);
-    if(!s||!r){box.textContent='Set dates to compute';box.className='computed-box empty';return;}
-    if(!weeks||weeks<4){box.textContent='Race must be ≥4 weeks after start';box.className='computed-box empty';return;}
-    box.textContent=weeks+' weeks';box.className='computed-box';
-  }
-}
-function updateInputState(){
-  updateWeeksDisplay();
-  updateTimeFieldDisplay('curTime', 'curTimeHint');
-  updateTimeFieldDisplay('goalTime', 'goalTimeHint');
-  var missing, btn=document.getElementById('analyzeBtn'), status=document.getElementById('inputStatus');
-  if (state.planType === 'standard'){
-    var cfg = readCfgStandard();
-    missing = validateStandard(cfg);
-  } else {
-    var cfgB = readCfgBeginner();
-    missing = validateBeginner(cfgB);
-  }
-  if(missing.length===0){btn.disabled=false;btn.textContent='Analyze & generate plan →';status.className='input-status ready';status.textContent='All inputs received — ready to generate.';}
-  else {btn.disabled=true;btn.textContent='Fill all fields →';status.className='input-status missing';status.textContent='Still needed: '+missing.join(', ')+'.';}
-}
-function runAnalysis(){ if (state.planType === 'beginner'){ runBeginnerAnalysis(); } else { runStandardAnalysis(); } }
-
-/* ============================ MAIN ANALYSIS ============================ */
-function runStandardAnalysis(force){
-  var cfg=readCfgStandard();
-  var missing=validateStandard(cfg);
-  if(missing.length>0){updateInputState();return;}
-  var weeks=computeWeeks(cfg.startDate,cfg.raceDate);
-  var raceIdx=raceDayIndexInFinalWeek(cfg.startDate,cfg.raceDate,weeks);
-  var trainingDays = 7 - state.allRestDays.size;
-  var capacity = computeCapacity(cfg.goalDist, trainingDays);
-  cfg.weeks=weeks; cfg.raceIdx=raceIdx;
-
-  if (cfg.peakKm > capacity && !force){
-    showCapacityWarning(cfg, trainingDays, capacity, weeks, raceIdx);
-    return;
-  }
-  state.showInjuryWarning = (cfg.peakKm > capacity);
-
-  state.cfg=cfg; state.userName=cfg.userName; state.longDay=cfg.longDay;
-  state.originalGoalTime=cfg.goalTime; state.adjustedGoalTime=cfg.goalTime;
-  state.currentVdotOverride=null;
-  var a=analyze(cfg);
-  state.analysis=a;
-  var planCfg={weeks:cfg.weeks,peakKm:cfg.peakKm,currentKm:cfg.currentKm,paceVdot:a.currentVdot,goalDist:cfg.goalDist,goalTime:cfg.goalTime,restDays:state.allRestDays,longDay:state.longDay,startDate:cfg.startDate,raceIdx:raceIdx};
-  state.plan=generatePlan(planCfg);
-  state.planOriginal=JSON.parse(JSON.stringify(state.plan));
-  a.ttWeekText=state.plan.ttWeek || '—';
-  document.getElementById('verdict').innerHTML=renderVerdict(a,cfg.userName,cfg);
-
-  var keepBtn=document.getElementById('keepGoalBtn');
-  var useFasterBtn=document.getElementById('useFasterBtn');
-  if(keepBtn)keepBtn.addEventListener('click',function(){ document.getElementById('verdict').innerHTML=''; });
-  if(useFasterBtn)useFasterBtn.addEventListener('click',function(){
-    writeTimeField('goalTime', a.suggestedGoalTime);
-    updateInputState();
-    runStandardAnalysis();
-  });
-
-  var raceDateObj=parseLocalDate(cfg.raceDate); var startDateObj=parseLocalDate(cfg.startDate);
-  state.planMeta={
-    eventLabel:RACE_META[String(cfg.goalDist)].name.charAt(0).toUpperCase()+RACE_META[String(cfg.goalDist)].name.slice(1)+' — goal '+fmtTime(cfg.goalTime),
-    goalTimeStr:fmtTime(cfg.goalTime),
-    subtitle:'Generated with Daniels\u2019 VDOT system · '+weeks+' weeks · '+RACE_META[String(cfg.goalDist)].name+' training',
-    currentVdot:a.currentVdot, targetVdot:a.targetVdot,
-    currentAbilityStr:fmtTime(findRaceTime(a.currentVdot,cfg.goalDist)),
-    raceDateStr:fmtDateLong(raceDateObj), firstDayStr:fmtDateLong(startDateObj),
-    peakKm:cfg.peakKm, longRunDay:DAY_NAMES[cfg.longDay]+'s',
-    showInjuryWarning: state.showInjuryWarning,
-    peakKmTarget: cfg.peakKm,
-    trainingDays: trainingDays
-  };
-  document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
-  if (state.plan.ttWeek){
-    document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
-    setupTimeField('ttTime');
-  }
-  updateFeelNote();
-  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-/* ============================ CAPACITY WARNING ============================ */
-function showCapacityWarning(cfg, trainingDays, capacity, weeks, raceIdx){
-  var distName = RACE_META[String(cfg.goalDist)].name;
-  var html='';
-  html+='<div class="capacity-warning no-print">';
-  html+='<h3><span class="cw-icon">⚠</span> Your schedule is tight for this peak volume</h3>';
-  html+='<p>With <strong>'+trainingDays+' training days</strong> and a <strong>'+distName+'</strong> goal, your realistic peak is around <strong>'+capacity+' km/week</strong>. You asked for <strong>'+cfg.peakKm+' km</strong>.</p>';
-  html+='<div class="actions">';
-  html+='<button class="btn primary" id="cwAddDay">Add a training day</button>';
-  html+='<button class="btn ghost-warning" id="cwLowerPeak">Lower peak to '+capacity+' km</button>';
-  html+='<button class="btn ghost-warning" id="cwContinueAnyway">Continue anyway</button>';
-  html+='</div>';
-  html+='</div>';
-  document.getElementById('verdict').innerHTML = html;
-  document.getElementById('plan').innerHTML = '';
-
-  var addBtn = document.getElementById('cwAddDay');
-  var lowerBtn = document.getElementById('cwLowerPeak');
-  var contBtn = document.getElementById('cwContinueAnyway');
-
-  if (addBtn) addBtn.addEventListener('click', function(){
-    var adj = findAdjacentRestDay(state.longDay, state.allRestDays);
-    if (adj === null){
-      alert('No adjacent rest day available to enable. Try lowering peak instead.');
-      return;
-    }
-    state.allRestDays.delete(adj);
-    var labels = document.querySelectorAll('#restDays label');
-    for (var i = 0; i < labels.length; i++){
-      var lbl = labels[i];
-      var d = parseInt(lbl.getAttribute('data-d'));
-      if (d === adj){ lbl.classList.remove('on'); }
-    }
-    runStandardAnalysis(false);
-  });
-
-  if (lowerBtn) lowerBtn.addEventListener('click', function(){
-    document.getElementById('peakKm').value = capacity;
-    updateInputState();
-    runStandardAnalysis(false);
-  });
-
-  if (contBtn) contBtn.addEventListener('click', function(){
-    document.getElementById('verdict').innerHTML = '';
-    runStandardAnalysis(true);
-  });
-
-  document.getElementById('verdict').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-/* ============================ BEGINNER ANALYSIS ============================ */
-function runBeginnerAnalysis(){
-  var cfg = readCfgBeginner();
-  var missing = validateBeginner(cfg);
-  if(missing.length>0){updateInputState();return;}
-  var weeks = computeWeeks(cfg.startDate, cfg.raceDate);
-  var raceIdx = raceDayIndexInFinalWeek(cfg.startDate, cfg.raceDate, weeks);
-  cfg.weeks = weeks; cfg.raceIdx = raceIdx;
-  cfg.goalLabel = cfg.goal==='5k'?'5K':(cfg.goal==='10k'?'10K':'Half marathon');
-  state.cfg = cfg; state.userName = cfg.userName; state.longDay = cfg.longDay;
-  state.analysis = null;
-  state.showInjuryWarning = false;
-  var planResult = generateBeginnerPlan(cfg);
-  state.plan = planResult;
-  state.planOriginal = JSON.parse(JSON.stringify(planResult));
-  document.getElementById('verdict').innerHTML = '';
-  var raceDateObj = parseLocalDate(cfg.raceDate);
-  var startDateObj = parseLocalDate(cfg.startDate);
-  state.planMeta = {
-    eventLabel: 'Beginner plan — goal: finish a '+cfg.goalLabel,
-    goalTimeStr: '', subtitle: 'Build from walking and run/walk intervals to continuous running · '+weeks+' weeks',
-    startingLevel: cfg.abilityLabel, daysPerWeek: cfg.daysPerWeek,
-    raceDateStr: fmtDateLong(raceDateObj), firstDayStr: fmtDateLong(startDateObj),
-    longRunDay: DAY_NAMES[cfg.longDay]+'s', peakKm: 0,
-    showInjuryWarning: false
-  };
-  document.getElementById('plan').innerHTML = renderPlan(planResult, state.planMeta, state.userName);
-  updateFeelNote();
-  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-/* ============================ RECALIBRATE ============================ */
-function handleRecalibrate(){
-  var dist=parseFloat(document.getElementById('ttDistance').value);
-  var tRes = readTimeField('ttTime');
-  var t = tRes.seconds;
-  if (tRes.incomplete){ alert('Enter all 6 digits for the TT time.'); return; }
-  if (tRes.invalid){ alert(tRes.message); return; }
-  if(!t||t<=0){alert('Enter a valid TT time (HH:MM:SS).');return;}
-  if(!state.plan.ttWeek){alert('No time trial scheduled in this plan.');return;}
-  var check = validateRaceInput(dist, t);
-  if (!check.valid){ alert(check.reason.replace(/<[^>]+>/g,'')); return; }
-  var newVdot=Vdot.fromRace(dist,t);
-  state.currentVdotOverride=newVdot;
-  var ttWeek=state.plan.ttWeek;
-  var oldPlan=state.plan, oldOriginal=state.planOriginal, cfg=state.cfg;
-  var savedFeelMode = state.feelMode, savedFeelDays = state.feelDays, savedFeelStartDate = state.feelStartDate;
-  var newResult=generatePlan({
-    weeks:cfg.weeks, peakKm:cfg.peakKm, currentKm:cfg.currentKm,
-    paceVdot:newVdot, goalDist:cfg.goalDist, goalTime:state.adjustedGoalTime,
-    restDays:state.allRestDays, longDay:state.longDay,
-    startDate:cfg.startDate, raceIdx:cfg.raceIdx
-  });
-  for (var i = 0; i < ttWeek-1; i++){ if (oldPlan.weeks[i]) newResult.weeks[i] = oldPlan.weeks[i]; }
-  state.plan = newResult;
-  var newOriginal = JSON.parse(JSON.stringify(newResult));
-  for (var i = 0; i < ttWeek-1; i++){ if (oldOriginal.weeks[i]) newOriginal.weeks[i] = JSON.parse(JSON.stringify(oldOriginal.weeks[i])); }
-  state.planOriginal = newOriginal;
-  if (savedFeelMode && savedFeelStartDate){
-    applyFeelingAdjustment(state.plan, savedFeelMode, savedFeelDays, savedFeelStartDate);
-    state.feelMode = savedFeelMode; state.feelDays = savedFeelDays; state.feelStartDate = savedFeelStartDate;
-  }
-  var remainingWeeks=cfg.weeks-ttWeek;
-  var extraGain=realisticGain(cfg.peakKm,minAdequateVolume(cfg.goalDist,newVdot),Math.max(remainingWeeks,1))*(remainingWeeks/8);
-  var projectedAtRace=newVdot+Math.max(0,extraGain*0.5);
-  var projectedTime=findRaceTime(projectedAtRace,cfg.goalDist);
-  state.planMeta.targetVdot=newVdot;
-  state.planMeta.subtitle='Recalibrated after Week '+ttWeek+' TT — new VDOT '+newVdot.toFixed(1)+' ('+fmtTime(t)+' @ '+dist+'m)';
-  document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
-  var goalCheckHtml=renderGoalCheck(projectedTime,projectedAtRace,newVdot);
-  document.getElementById('plan').insertAdjacentHTML('afterbegin',goalCheckHtml);
-  var keepBtn2=document.getElementById('keepGoalBtn2');
-  var acceptBtn=document.getElementById('acceptGoalBtn');
-  var resetBtn=document.getElementById('resetGoalBtn');
-  if(keepBtn2)keepBtn2.addEventListener('click',function(){dismissGoalCheck('keep');});
-  if(acceptBtn)acceptBtn.addEventListener('click',function(){
-    writeTimeField('goalTime', projectedTime);
-    updateInputState();
-    runStandardAnalysis();
-  });
-  if(resetBtn)resetBtn.addEventListener('click',function(){
-    var input=prompt('Enter your new goal time (HH:MM:SS):',fmtTime(state.originalGoalTime));
-    if(input){
-      var parts = input.split(':').map(Number);
-      if (parts.length === 3 && !parts.some(isNaN)){
-        var t2 = parts[0]*3600 + parts[1]*60 + parts[2];
-        if (t2 > 0){
-          writeTimeField('goalTime', t2);
-          updateInputState();
-          runStandardAnalysis();
-        }
-      }
-    }
-  });
-  if (state.plan.ttWeek){
-    document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
-    setupTimeField('ttTime');
-  }
-  updateFeelNote();
-  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
-}
-function renderGoalCheck(projectedTime,projectedVdot,currentVdot){
-  var originalTime=state.originalGoalTime;
-  var projectedIsFaster=projectedTime<originalTime;
-  var gapSec=Math.abs(projectedTime-originalTime);
-  var gapMin=Math.floor(gapSec/60); var gapSecRem=Math.round(gapSec%60);
-  var gapStr=gapMin+':'+(gapSecRem<10?'0':'')+gapSecRem;
-  var message;
-  if(projectedIsFaster||gapSec<60){ message='Your time trial shows you\'re on track (or ahead) for your original goal of '+fmtTime(originalTime)+'. Keep going as planned.'; }
-  else { message='Your time trial shows fitness at <strong>VDOT '+currentVdot.toFixed(1)+'</strong>. With the remaining weeks, your realistic finish is closer to <strong>'+fmtTime(projectedTime)+'</strong> — about '+gapStr+' slower than your original goal of '+fmtTime(originalTime)+'. <strong>What would you like to do?</strong>'; }
-  return '<div class="goal-check no-print" id="goalCheck"><h3>Goal check — after the time trial</h3><p>'+message+'</p><div class="compare"><div class="compare-item"><div class="ci-label">Original goal</div><div class="ci-value">'+fmtTime(originalTime)+'</div><div class="ci-sub">Entered at plan start</div></div><div class="compare-item"><div class="ci-label">Projected at race day</div><div class="ci-value">'+fmtTime(projectedTime)+'</div><div class="ci-sub">Based on time trial + remaining weeks</div></div></div><div class="actions"><button class="btn primary" id="keepGoalBtn2">Keep original goal '+fmtTime(originalTime)+'</button><button class="btn green" id="acceptGoalBtn">Accept realistic goal '+fmtTime(projectedTime)+'</button><button class="btn" id="resetGoalBtn">Adjust goal manually</button></div></div>';
-}
-function dismissGoalCheck(action,newTime){ var panel=document.getElementById('goalCheck'); if(!panel)return; panel.remove(); }
-
-/* ============================ REST DAYS UI ============================ */
-function refreshRestDaysUI(){
-  var longDay=parseInt(document.getElementById('longRunDay').value);
-  state.longDay=longDay;
-  var labels=document.querySelectorAll('#restDays label');
-  for(var i=0;i<labels.length;i++){
-    var lbl=labels[i]; var d=parseInt(lbl.getAttribute('data-d'));
-    if(d===longDay){lbl.classList.add('disabled');lbl.classList.remove('on');state.allRestDays.delete(d);}
-    else {lbl.classList.remove('disabled');}
-  }
-}
-function refreshBeginnerRestDaysUI(){
-  var longDay=parseInt(document.getElementById('bLongRunDay').value);
-  state.beginnerLongDay=longDay;
-  var labels=document.querySelectorAll('#bRestDays label');
-  for(var i=0;i<labels.length;i++){
-    var lbl=labels[i]; var d=parseInt(lbl.getAttribute('data-d'));
-    if(d===longDay){lbl.classList.add('disabled');lbl.classList.remove('on');state.beginnerRestDays.delete(d);}
-    else {lbl.classList.remove('disabled');}
-  }
-}
-var restLabels=document.querySelectorAll('#restDays label');
-for(var i=0;i<restLabels.length;i++){
-  (function(lbl){
-    lbl.addEventListener('click',function(e){
-      e.preventDefault();
-      var d=parseInt(lbl.getAttribute('data-d'));
-      if(d===state.longDay)return;
-      if(state.allRestDays.has(d))state.allRestDays.delete(d);else state.allRestDays.add(d);
-      if(state.allRestDays.has(d))lbl.classList.add('on');else lbl.classList.remove('on');
-      updateInputState();
-    });
-  })(restLabels[i]);
-}
-var bRestLabels=document.querySelectorAll('#bRestDays label');
-for(var i=0;i<bRestLabels.length;i++){
-  (function(lbl){
-    lbl.addEventListener('click',function(e){
-      e.preventDefault();
-      var d=parseInt(lbl.getAttribute('data-d'));
-      if(d===state.beginnerLongDay)return;
-      if(state.beginnerRestDays.has(d))state.beginnerRestDays.delete(d);else state.beginnerRestDays.add(d);
-      if(state.beginnerRestDays.has(d))lbl.classList.add('on');else lbl.classList.remove('on');
-      updateInputState();
-    });
-  })(bRestLabels[i]);
-}
-document.getElementById('longRunDay').addEventListener('change',function(){refreshRestDaysUI();updateInputState();});
-document.getElementById('bLongRunDay').addEventListener('change',function(){refreshBeginnerRestDaysUI();updateInputState();});
-
-/* ============================ TABS ============================ */
-document.querySelectorAll('.plan-tab').forEach(function(tab){
-  tab.addEventListener('click', function(){
-    document.querySelectorAll('.plan-tab').forEach(function(t){ t.classList.remove('on'); });
-    tab.classList.add('on');
-    state.planType = tab.getAttribute('data-ptype');
-    if (state.planType === 'standard'){
-      document.getElementById('standardInputs').style.display = 'block';
-      document.getElementById('beginnerInputs').style.display = 'none';
-    } else {
-      document.getElementById('standardInputs').style.display = 'none';
-      document.getElementById('beginnerInputs').style.display = 'block';
-    }
-    updateInputState();
-  });
-});
-
-/* ============================ SUGGEST PEAK ============================ */
-var popover=null;
-document.getElementById('suggestBtn').addEventListener('click',function(e){
-  e.stopPropagation();
-  if(popover){popover.remove();popover=null;return;}
-  var goalDist=document.getElementById('goalDist').value;
-  var curKm=parseFloat(document.getElementById('currentKm').value)||0;
-  if(!goalDist){alert('Select a goal distance first.');return;}
-  if(!curKm||curKm<=0){alert('Enter your current weekly km first.');return;}
-  var tiers=suggestPeakTiers(goalDist,curKm);
-  popover=document.createElement('div'); popover.className='suggest-popover';
-  var html='<h4>Peak weekly km — suggested</h4><p>Pick a tier that matches your goal.</p>';
-  for(var i=0;i<tiers.length;i++)html+='<div class="tier-row" data-km="'+tiers[i].km+'"><span class="tier-name">'+tiers[i].name+'</span><span class="tier-km">'+tiers[i].km+' km</span><span class="tier-note">'+tiers[i].note+'</span></div>';
-  popover.innerHTML=html;
-  var btn=document.getElementById('suggestBtn'); var rect=btn.getBoundingClientRect();
-  popover.style.position='fixed'; popover.style.top=(rect.bottom+6)+'px';
-  popover.style.left=Math.max(20,rect.left-180)+'px';
-  document.body.appendChild(popover);
-  var rows=popover.querySelectorAll('.tier-row');
-  for(var j=0;j<rows.length;j++){
-    rows[j].addEventListener('click',function(){
-      var km=parseInt(this.getAttribute('data-km'));
-      document.getElementById('peakKm').value=km;
-      popover.remove();popover=null; updateInputState();
-    });
-  }
-});
-document.addEventListener('click',function(){if(popover){popover.remove();popover=null;}});
-
-/* ============================ FEELING ADJUSTER ============================ */
-var feelPanel=document.getElementById('feelPanel');
-var feelHead=document.getElementById('feelHead');
-var feelToggle=document.getElementById('feelToggle');
-var modeButtons=document.querySelectorAll('.mode-card');
-var feelApplyBtn=document.getElementById('feelApply');
-var feelClearBtn=document.getElementById('feelClear');
-var feelNote=document.getElementById('feelNote');
-
-feelHead.addEventListener('click',function(){
-  feelPanel.classList.toggle('collapsed');
-  feelPanel.classList.toggle('open');
-  feelToggle.textContent = feelPanel.classList.contains('open') ? 'close ▴' : 'open ▾';
-});
-modeButtons.forEach(function(btn){
-  btn.addEventListener('click',function(){
-    modeButtons.forEach(function(b){ b.classList.remove('on'); });
-    btn.classList.add('on');
-    state.feelMode = btn.getAttribute('data-mode');
-    feelApplyBtn.disabled = false;
-    updateFeelNote();
-  });
-});
-feelApplyBtn.addEventListener('click',function(){
-  if(!state.feelMode){ alert('Pick a mode first.'); return; }
-  if(!state.planOriginal){ alert('Generate a plan first, then apply.'); return; }
-  if(state.planType === 'beginner'){ alert('The feeling adjuster isn\'t available for beginner plans yet. Just take an extra rest day if you need one.'); return; }
-  var days=parseInt(document.getElementById('feelDays').value);
-  var startSel=document.getElementById('feelStart').value;
-  var startDate;
-  if(startSel==='today'){
-    startDate=new Date(); startDate.setHours(0,0,0,0);
-    var planStart=parseLocalDate(state.cfg.startDate); planStart.setHours(0,0,0,0);
-    if(startDate < planStart) startDate = new Date(planStart);
-  } else {
-    startDate=parseLocalDate(state.cfg.startDate); startDate.setHours(0,0,0,0);
-  }
-  state.feelDays=days; state.feelStartDate=startDate;
-  var adjusted=JSON.parse(JSON.stringify(state.planOriginal));
-  var count=applyFeelingAdjustment(adjusted, state.feelMode, days, startDate);
-  state.plan=adjusted;
-  document.getElementById('plan').innerHTML=renderPlan(adjusted,state.planMeta,state.userName);
-  if (state.plan.ttWeek){
-    document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
-    setupTimeField('ttTime');
-  }
-  updateFeelNote(count);
-  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
-});
-feelClearBtn.addEventListener('click',function(){
-  if(!state.planOriginal) return;
-  state.plan=JSON.parse(JSON.stringify(state.planOriginal));
-  state.feelMode=null; state.feelDays=0; state.feelStartDate=null;
-  modeButtons.forEach(function(b){ b.classList.remove('on'); });
-  feelApplyBtn.disabled=true;
-  document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
-  if (state.plan.ttWeek){
-    document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
-    setupTimeField('ttTime');
-  }
-  updateFeelNote();
-});
-function updateFeelNote(count){
-  if (state.planType === 'beginner'){
-    feelNote.innerHTML = 'Beginner plans don\'t support auto-adjustment. If you need a lighter day, take an extra rest day.';
-    feelApplyBtn.disabled = true;
-    return;
-  }
-  var parts=[];
-  if(state.feelMode){
-    var label = state.feelMode==='fatigue' ? 'Fatigued' : (state.feelMode==='sick' ? 'Sick' : 'Busy');
-    parts.push('Mode: <strong>'+label+'</strong>');
-  }
-  if(count && count > 0){ parts.push(count+' day'+(count===1?'':'s')+' adjusted in the plan below.'); }
-  if(parts.length === 0){ feelNote.textContent = 'Select a mode and click Apply. The adjusted days will be highlighted; other days stay untouched.'; }
-  else { feelNote.innerHTML = parts.join(' · '); }
-}
-function applyFeelingAdjustment(plan, mode, days, startDate){
-  var startT = startDate.getTime();
-  var endDate = new Date(startDate); endDate.setDate(endDate.getDate() + days - 1);
-  var endT = endDate.getTime();
-  var count = 0;
-  var isFirstQOfWeek = {};
-  for (var w = 0; w < plan.weeks.length; w++){
-    var week = plan.weeks[w];
-    isFirstQOfWeek[week.number] = true;
-    var weekDates = computeWeekDates(plan.startDate, week.number);
-    for (var d = 0; d < weekDates.length; d++){
-      var thisDate = new Date(weekDates[d]); thisDate.setHours(0,0,0,0);
-      var thisT = thisDate.getTime();
-      if (thisT < startT) continue;
-      if (thisT > endT) continue;
-      var day = week.days[d];
-      if (!day) continue;
-      if (day.zone === 'race') continue;
-      var adj = adjustWorkout(day, mode, isFirstQOfWeek[week.number]);
-      if (adj){
-        day.originalTitle = day.title; day.originalZone = day.zone; day.originalTotalKm = day.totalKm;
-        day.adjusted = true; day.adjustMode = mode;
-        day.zone = adj.zone; day.title = adj.title; day.detail = adj.detail || ''; day.totalKm = adj.totalKm;
-        day.isQ = false; day.qRank = null; day.isLongRun = false; day.isSim = false;
-        if (day.originalZone === 'T' || day.originalZone === 'I' || day.originalZone === 'R' || day.originalZone === 'M' || day.originalZone === 'tt') { isFirstQOfWeek[week.number] = false; }
-        count++;
-      }
-    }
-  }
-  for (var w = 0; w < plan.weeks.length; w++){
-    var tot = 0;
-    for (var d = 0; d < plan.weeks[w].days.length; d++){ var dd = plan.weeks[w].days[d]; if (dd && isFinite(dd.totalKm)) tot += dd.totalKm; }
-    plan.weeks[w].totalKm = tot;
-  }
-  return count;
-}
-function adjustWorkout(day, mode, isFirstQOfWeek){
-  var z = day.zone;
-  if (z === 'rest' || z === 'race') return null;
-  var isQuality = (z === 'T' || z === 'I' || z === 'R' || z === 'M' || z === 'tt');
-  if (mode === 'sick'){ return { zone: 'rest', title: 'Rest / walk only', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 0 }; }
-  if (mode === 'fatigue'){
-    if (day.isLongRun) return { zone: 'E', title: 'Eased long run', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: Math.max(6, Math.round(day.totalKm * 0.6)) };
-    if (isQuality){ if (z === 'T') return { zone: 'T', title: 'Short T session', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 5 }; return { zone: 'E', title: '25 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 4 }; }
-    return { zone: 'E', title: '20 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 3 };
-  }
-  if (mode === 'busy'){
-    if (day.isLongRun) return { zone: 'E', title: '40 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 7 };
-    if (isQuality){
-      if (isFirstQOfWeek){ var shortened = Math.max(5, Math.round(day.totalKm * 0.55)); return { zone: z, title: 'Short ' + z, detail: 'Was: ' + (day.originalTitle || day.title), totalKm: shortened }; }
-      return { zone: 'E', title: '25 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 4 };
-    }
-    return { zone: 'E', title: '25 min E', detail: 'Was: ' + (day.originalTitle || day.title), totalKm: 4 };
-  }
-  return null;
-}
-
-/* ============================ SETUP ============================ */
-setupTimeField('curTime');
-setupTimeField('goalTime');
-
-var inputIds=['userName','startDate','raceDate','curDist','currentKm','goalDist','peakKm','bStartDate','bRaceDate','bAbility','bDays','bGoal'];
-for(var i=0;i<inputIds.length;i++){
-  (function(id){
-    var el=document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('input',updateInputState);
-    el.addEventListener('change',updateInputState);
-  })(inputIds[i]);
-}
-document.getElementById('analyzeBtn').addEventListener('click',runAnalysis);
-document.getElementById('printBtn').addEventListener('click',function(){window.print();});
-
-function showToast(msg){
-  var toast=document.getElementById('copyToast');
-  toast.textContent=msg; toast.classList.add('show');
-  setTimeout(function(){toast.classList.remove('show');},2000);
-}
-document.getElementById('copyEmailBtn').addEventListener('click',function(){
-  var email=document.getElementById('feedbackEmail').textContent.trim();
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(email).then(function(){showToast('Email address copied');}).catch(function(){
-      var ta=document.createElement('textarea');
-      ta.value=email; ta.style.position='fixed'; ta.style.left='-9999px';
-      document.body.appendChild(ta); ta.select();
-      try{document.execCommand('copy');showToast('Email address copied');}catch(e){showToast('Copy failed — please note down: '+email);}
-      document.body.removeChild(ta);
-    });
-  } else {
-    var ta=document.createElement('textarea');
-    ta.value=email; ta.style.position='fixed'; ta.style.left='-9999px';
-    document.body.appendChild(ta); ta.select();
-    try{document.execCommand('copy');showToast('Email address copied');}catch(e){showToast('Copy failed — please note down: '+email);}
-    document.body.removeChild(ta);
-  }
-});
-document.getElementById('feedbackLink').addEventListener('click',function(e){
-  setTimeout(function(){
-    var email=document.getElementById('feedbackEmail').textContent.trim();
-    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(email).catch(function(){});
-  }, 100);
-});
-
-refreshRestDaysUI();
-refreshBeginnerRestDaysUI();
-updateInputState();
-</script>
-</body>
-</html>
+  var fieldMap={userName:'field-userName',bStartDate:'field-bStartDate',bRaceDate:'field-bRaceDate',bAbility:'field-bAbility',bDays:'field-bDays
