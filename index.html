@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pre-Flight Coach v20 — Adaptive Training Plan</title>
+<title>Pre-Flight Coach v21 — Adaptive Training Plan</title>
 <style>
   :root{
     --bg:#f5f5f7;--surface:#fff;--border:#e2e2e8;--text:#16161c;--muted:#6b6b78;
@@ -156,6 +156,7 @@
   .phase-I{background:var(--green)}.phase-II{background:var(--amber)}.phase-III{background:var(--red)}.phase-IV{background:var(--purple)}
   .phase-A{background:#06b6d4}.phase-B{background:#0891b2}.phase-C{background:#0e7490}.phase-D{background:#155e75}
   .week-head .wk-total{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+  .wk-total .race-bit{color:#b45309;font-weight:700}
   table.week-grid{width:100%;table-layout:fixed;border-collapse:collapse;background:var(--surface)}
   table.week-grid td{width:14.28%;vertical-align:top;padding:8px 7px;border-right:1px solid var(--border);font-size:11px;line-height:1.35}
   table.week-grid td:last-child{border-right:none}
@@ -264,7 +265,7 @@
 
 <header class="header no-print">
   <h1>Pre-Flight Coach</h1>
-  <span class="version-pill" id="headerVersion">v20</span>
+  <span class="version-pill" id="headerVersion">v21</span>
   <span class="sub">Daniels' Formula · Adaptive Training Plan</span>
   <span class="spacer"></span>
   <button class="btn" id="printBtn">🖨 Print / Save PDF</button>
@@ -533,7 +534,7 @@
     <div class="fb-desc">Found a bug, an odd workout, or just want to share how the plan went? Send a note — this is a work in progress and every bit of feedback helps.</div>
     <div class="fb-email" id="feedbackEmail">ravikorurolu82@gmail.com</div>
     <div class="fb-actions">
-      <a class="fb-btn" id="feedbackLink" href="mailto:ravikorurolu82@gmail.com?subject=Pre-Flight%20Coach%20v20%20Feedback">✉ Open in email app</a>
+      <a class="fb-btn" id="feedbackLink" href="mailto:ravikorurolu82@gmail.com?subject=Pre-Flight%20Coach%20v21%20Feedback">✉ Open in email app</a>
       <button class="fb-btn ghost" id="copyEmailBtn" type="button">📋 Copy email address</button>
     </div>
   </div>
@@ -543,8 +544,11 @@
 <div class="copy-toast" id="copyToast">Email address copied</div>
 
 <script>
-var APP_VERSION = 'v20';
+var APP_VERSION = 'v21';
 
+/* ═══════════════════════════════════════════════════════════
+   DATE HELPERS
+   ═══════════════════════════════════════════════════════════ */
 function parseLocalDate(str){
   if (!str) return null;
   var parts = String(str).split('-');
@@ -601,7 +605,11 @@ function raceDayIndexInFinalWeek(startStr, endStr, weeks){
 function fmtDateShort(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function fmtDateLong(d){return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});}
 function dayNameOf(d){return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];}
+function diffDays(a,b){return Math.round((b-a)/(1000*60*60*24));}
 
+/* ═══════════════════════════════════════════════════════════
+   VDOT ENGINE — UNCHANGED
+   ═══════════════════════════════════════════════════════════ */
 var Vdot={
   vo2FromSpeed:function(v){return -4.60+0.182258*v+0.000104*v*v;},
   fractionOfVdot:function(t){return 0.8+0.1894393*Math.exp(-0.012778*t)+0.2989558*Math.exp(-0.1932605*t);},
@@ -612,6 +620,9 @@ var Vdot={
 var PCT={E_SLOW:0.62,E_FAST:0.74,M:0.81,T:0.88,I:0.98,R:1.06};
 var ELITE_MIN_SECONDS = {1500:206, 1609.344:223, 3000:440, 5000:755, 10000:1571, 21097.5:3480, 42195:7235};
 
+/* ═══════════════════════════════════════════════════════════
+   TIME INPUT — masked HH:MM:SS (V18-style)
+   ═══════════════════════════════════════════════════════════ */
 function maskTimeDigits(digits){
   if (!digits) return '';
   var hh = digits.substring(0, Math.min(2, digits.length));
@@ -696,6 +707,9 @@ function updateTimeFieldDisplay(id, hintId){
   fieldEl.classList.add('ready'); hintEl.classList.add('ready'); hintEl.textContent = '✓ Ready';
 }
 
+/* ═══════════════════════════════════════════════════════════
+   FORMAT HELPERS
+   ═══════════════════════════════════════════════════════════ */
 function fmtTime(sec,opt){
   opt=opt||{};
   if(!isFinite(sec)||sec<=0)return '—';
@@ -726,7 +740,11 @@ function findRaceTime(vdot,dM){var lo=60,hi=60*300;for(var i=0;i<60;i++){var mid
 function isMarathonDistance(g){ return parseFloat(g) === 42195; }
 function isHalfMarathon(g){ return parseFloat(g) === 21097.5; }
 function stripHtml(s){ return String(s||'').replace(/<[^>]+>/g,''); }
+function escapeHtml(s){if(s===null||s===undefined)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
+/* ═══════════════════════════════════════════════════════════
+   VALIDATION
+   ═══════════════════════════════════════════════════════════ */
 function validateRaceInput(distanceM, timeSec){
   if (!distanceM || !timeSec || timeSec <= 0){
     return {valid: false, reason: 'Please enter both a race distance and a race time.'};
@@ -752,6 +770,9 @@ function validateRaceInput(distanceM, timeSec){
   return {valid: true, vdot: vdot};
 }
 
+/* ═══════════════════════════════════════════════════════════
+   PHASES
+   ═══════════════════════════════════════════════════════════ */
 function computePhaseBoundaries(totalWeeks){
   if (totalWeeks <= 2) return {I: totalWeeks - 1, II: totalWeeks - 1, III: totalWeeks - 1, IV: totalWeeks, phaseIVStart: totalWeeks};
   if (totalWeeks <= 4){
@@ -775,6 +796,9 @@ function computePhaseBoundaries(totalWeeks){
   return {I: phaseIWeeks, II: phaseIWeeks + phaseIIWeeks, III: phaseIWeeks + phaseIIWeeks + phaseIIIWeeks, IV: totalWeeks, phaseIVStart: phaseIWeeks + phaseIIWeeks + phaseIIIWeeks + 1};
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ANALYSIS
+   ═══════════════════════════════════════════════════════════ */
 var RACE_META={'5000':{km:5,name:'5K'},'10000':{km:10,name:'10K'},'21097.5':{km:21.0975,name:'half marathon'},'42195':{km:42.195,name:'marathon'}};
 function minAdequateVolume(goalDist,targetVdot){
   var key = String(goalDist);
@@ -861,6 +885,9 @@ function suggestPeakTiers(goalDist,currentKm){
   return list.map(function(t){return {name:t.name,km:Math.max(t.km,currentKm),note:t.note};});
 }
 
+/* ═══════════════════════════════════════════════════════════
+   WORKOUTS
+   ═══════════════════════════════════════════════════════════ */
 var DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function chooseTTDistance(goalDist, peakKm){
   var goalTargets = {'800':1000,'1500':1500,'1609.344':1609,'3000':3000,'5000':5000,'10000':5000,'21097.5':10000,'42195':10000};
@@ -880,34 +907,48 @@ function ttDistanceLabelFor(meters){
 function eRunKm(km,strides){
   return { zone:'E', title: km+' km E'+(strides?' + '+strides+' strides':''), totalKm: km, strides: strides || 0, detail: strides ? strides+' × 20 s light & quick' : '', isQ: false };
 }
-function lRunKm(caps, weekVol, capMin, paces, goalDist){
+function lRunKm(caps, weekVol, capMin, paces, goalDist, longDayIdx){
   var avgEPaceSec = (paces.E_slow + paces.E_fast) / 2;
   var kmFromTime = capMin * 60 / avgEPaceSec;
   var isMar = isMarathonDistance(goalDist);
   var weeklyCap = weekVol * (isMar ? 0.40 : 0.32);
-  var km = Math.min(caps.L, kmFromTime, weeklyCap);
+  var km = Math.min(caps.L, kmFromTime);
+  if (capMin * 60 / avgEPaceSec >= weeklyCap){
+    km = Math.min(km, weeklyCap);
+  }
   var actualKm = Math.max(8, Math.round(km));
   return { zone:'E', title:'Long run '+actualKm+' km', totalKm: actualKm, detail:'Easy / conversational', isQ: false, isLongRun: true };
 }
 function restDay(){return {zone:'rest',title:'Rest',totalKm:0,detail:'',isQ:false};}
-function raceDay(label){return {zone:'race',title:label,totalKm:0,detail:'Race day',isQ:false};}
+function raceDay(label,raceKm){return {zone:'race',title:label,totalKm:0,detail:'Race day',isQ:false,raceKm:raceKm||0};}
 function ttDay(distLabel,distM){return {zone:'tt',title:distLabel+' Time Trial',totalKm:distM/1000+3,detail:'Hard, even pace',isQ:true};}
-function racePaceSimLong(peakKm, goalDist, variant){
+function racePaceSimLong(peakKm, goalDist, variant, phaseProgress){
   var isMar = isMarathonDistance(goalDist);
-  var v = (variant || 0) % 2;
+  var v = (variant || 0) % 3;
+  var p = (phaseProgress === undefined) ? 1 : phaseProgress;
+  /* p goes 0 → 1 across specific phase, so blocks grow */
+  var mFrac = 0.35 + 0.25 * p;   /* 0.35 → 0.60 of total */
   if (v === 0){
     var totalA = isMar ? Math.min(peakKm * 0.36, 32) : Math.min(peakKm * 0.28, 26);
     totalA = Math.round(totalA);
-    var mA = Math.round(totalA * 0.55);
+    var mA = Math.round(totalA * mFrac);
     var eA = totalA - mA;
     return {zone:'M',title:eA+' km E + '+mA+' km M',totalKm:totalA,detail:'Race rehearsal · practice fueling at goal pace',isQ:true,isSim:true};
   }
-  var totalB = isMar ? Math.min(peakKm * 0.32, 28) : Math.min(peakKm * 0.26, 22);
-  totalB = Math.round(totalB);
-  var tB = Math.round(totalB * 0.20);
-  var mB = Math.round(totalB * 0.45);
-  var eB = totalB - mB - tB;
-  return {zone:'M',title:eB+' km E + '+mB+' km M + '+tB+' km T',totalKm:totalB,detail:'Race rehearsal with a faster finish',isQ:true,isSim:true};
+  if (v === 1){
+    var totalB = isMar ? Math.min(peakKm * 0.32, 28) : Math.min(peakKm * 0.26, 22);
+    totalB = Math.round(totalB);
+    var tB = Math.round(totalB * 0.15);
+    var mB = Math.round(totalB * mFrac);
+    var eB = totalB - mB - tB;
+    return {zone:'M',title:eB+' km E + '+mB+' km M + '+tB+' km T',totalKm:totalB,detail:'Race rehearsal with a faster finish',isQ:true,isSim:true};
+  }
+  /* v===2 — progressive M finish */
+  var totalC = isMar ? Math.min(peakKm * 0.35, 30) : Math.min(peakKm * 0.27, 24);
+  totalC = Math.round(totalC);
+  var mC = Math.round(totalC * mFrac);
+  var eC = totalC - mC;
+  return {zone:'M',title:eC+' km E + '+mC+' km progressive M',totalKm:totalC,detail:'Final M block cut down toward goal pace',isQ:true,isSim:true};
 }
 function rSession(caps,weeklyKm,v){
   var lim=caps.R,variant=v%4;
@@ -936,6 +977,9 @@ function tSession(caps,weeklyKm,v){
 }
 function goalPaceRehearsal(goalPaceSecPerKm){return {zone:'T',title:'3 × 2 km @ goal pace',totalKm:9,detail:'Target '+paceKm(goalPaceSecPerKm)+' · 3 min jogs',isQ:true};}
 
+/* ═══════════════════════════════════════════════════════════
+   PADDING
+   ═══════════════════════════════════════════════════════════ */
 function padEasyRuns(days, weekLen, targetKm, longRunKm){
   if (weekLen < 5) return;
   var currentKm = 0;
@@ -998,7 +1042,98 @@ function padQualitySessions(days, weekLen, targetKm, longRunKm){
     shortfall -= add;
   }
 }
+/* ═══════════════════════════════════════════════════════════
+   HARD WEEKLY MILEAGE CAP
+   Guarantees sum(days.totalKm) <= peakKm.
+   Reduction order: padding → easy runs → long run.
+   Never touches: race, TT, T/I/R.
+   ═══════════════════════════════════════════════════════════ */
+function enforceWeeklyCap(days, peakKm, longDayIdx){
+  function weekTotal(){
+    var t = 0;
+    for (var i = 0; i < days.length; i++){
+      var d = days[i];
+      if (d && isFinite(d.totalKm)) t += d.totalKm;
+    }
+    return t;
+  }
+  function setETitle(d){
+    var s = (Math.round(d.totalKm * 10) / 10).toString();
+    d.title = s + ' km E' + (d.strides ? ' + ' + d.strides + ' strides' : '');
+  }
 
+  var total = weekTotal();
+  if (total <= peakKm + 0.001) return;
+  var over = total - peakKm;
+
+  /* Priority 1 — strip padding */
+  for (var i = 0; i < days.length && over > 0.001; i++){
+    var d = days[i];
+    if (!d || !d.paddedKm || d.paddedKm <= 0) continue;
+    var strip = Math.min(d.paddedKm, over);
+    d.totalKm = Math.round((d.totalKm - strip) * 10) / 10;
+    d.paddedKm -= strip;
+    setETitle(d);
+    d.detail = (d.detail || '').replace(/ · \+\d+(\.\d+)? km easy/g, '');
+    over -= strip;
+  }
+
+  /* Priority 2 — reduce E runs (longest first, floor 4 km) */
+  var easyIdxs = [];
+  for (var i = 0; i < days.length; i++){
+    var d = days[i];
+    if (!d || d.zone !== 'E' || d.isLongRun) continue;
+    easyIdxs.push(i);
+  }
+  easyIdxs.sort(function(a,b){ return days[b].totalKm - days[a].totalKm; });
+  for (var k = 0; k < easyIdxs.length && over > 0.001; k++){
+    var d = days[easyIdxs[k]];
+    var room = d.totalKm - 4;
+    if (room <= 0) continue;
+    var cut = Math.min(room, over);
+    d.totalKm = Math.round((d.totalKm - cut) * 10) / 10;
+    setETitle(d);
+    over -= cut;
+  }
+
+  /* Priority 3 — long run emergency reduction (floor 8 km) */
+  if (over > 0.001 && longDayIdx >= 0 && days[longDayIdx]){
+    var lr = days[longDayIdx];
+    var roomLR = lr.totalKm - 8;
+    if (roomLR > 0){
+      var cutLR = Math.min(roomLR, over);
+      lr.totalKm = Math.round((lr.totalKm - cutLR) * 10) / 10;
+      lr.title = 'Long run ' + lr.totalKm + ' km';
+      over -= cutLR;
+    }
+  }
+
+  if (over > 0.01){
+    console.error('[enforceWeeklyCap] Could not fully cap week', {peakKm: peakKm, remainingOver: over});
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MARATHON-SPECIFIC SESSION (used in specific phase)
+   ═══════════════════════════════════════════════════════════ */
+function mSession(caps, weeklyKm, v, goalPaceSecPerKm){
+  var variant = v % 3;
+  if (variant === 0) return {zone:'M', title:'2 × 3 km @ goal M', totalKm:8, detail:'Goal-pace reps · 2 min jogs · '+paceKm(goalPaceSecPerKm), isQ:true};
+  if (variant === 1) return {zone:'M', title:'3 × 2 km @ goal M', totalKm:9, detail:'2 min jogs · '+paceKm(goalPaceSecPerKm), isQ:true};
+  return {zone:'M', title:'Progressive 6 km M', totalKm:9, detail:'Start at current M, finish at goal M', isQ:true};
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN PLAN GENERATOR
+   Fixes vs. previous version:
+   - Cutbacks for 12–17 week plans (2 for 14+, 1 for 12–13)
+   - Long run reduced 30% on cutback, 40% on taper
+   - TT week contains ONLY the TT as quality, easy day after
+   - Fitness gap (VDOT delta) drives marathon-specific work
+   - Marathon sim long runs progress through 3 variants
+   - Hard weekly mileage cap via enforceWeeklyCap
+   - Race week reports training + race distance separately
+   ═══════════════════════════════════════════════════════════ */
 function generatePlan(cfg){
   var weeks=cfg.weeks,peakKm=cfg.peakKm,currentKm=cfg.currentKm||peakKm*0.6;
   var paceVdot = cfg.paceVdot || cfg.targetVdot || 40;
@@ -1010,8 +1145,17 @@ function generatePlan(cfg){
   var targetLongMin = Math.min(rawTargetLongMin, caps.Lmin);
   var goalPaceSecPerKm=goalTime/(goalDist/1000);
   var currentMPaceSecPerKm=paces.M;
-  var rehearsalNeeded=(currentMPaceSecPerKm-goalPaceSecPerKm)>20;
+
+  /* FITNESS-GAP based marathon-specific decision */
+  var targetVdot = Vdot.fromRace(goalDist, goalTime);
+  var fitnessGap = targetVdot - paceVdot;
+  var paceGap = currentMPaceSecPerKm - goalPaceSecPerKm;
+  var rehearsalNeeded = (fitnessGap >= 1.0) || (paceGap > 20);
+
   var isMar = isMarathonDistance(goalDist);
+  var bounds = computePhaseBoundaries(weeks);
+
+  /* TT week */
   var ttWeek = Math.max(3, Math.round(weeks * 0.5));
   var boundsCheck = computePhaseBoundaries(weeks);
   if (weeks < 6){ ttWeek = null; }
@@ -1020,55 +1164,86 @@ function generatePlan(cfg){
   }
   var ttDistance = chooseTTDistance(goalDist, peakKm);
   var ttDistanceLabel = ttDistanceLabelFor(ttDistance);
+
+  /* Raw sim weeks (before cutback filter) */
+  var simWeeks_raw = isMar
+    ? [weeks-6, weeks-4, weeks-3].filter(function(w){ return w > bounds.II && w < bounds.phaseIVStart; })
+    : [];
+
+  /* CUTBACK WEEKS */
+  var numCutbacks = weeks >= 14 ? 2 : (weeks >= 12 ? 1 : 0);
+  var cutbackWeeks = [];
+  var lastSafeWeek = bounds.phaseIVStart - 1;
+  var firstSafeWeek = Math.max(3, Math.round(bounds.II * 0.55));
+  function isSafeCutback(c){
+    if (c < firstSafeWeek || c > lastSafeWeek) return false;
+    if (simWeeks_raw.indexOf(c) >= 0) return false;
+    if (ttWeek !== null && c === ttWeek) return false;
+    return true;
+  }
+  if (numCutbacks >= 1){
+    var c1 = Math.max(firstSafeWeek, Math.round(weeks * 0.30));
+    while (c1 <= lastSafeWeek && !isSafeCutback(c1)) c1++;
+    if (isSafeCutback(c1)) cutbackWeeks.push(c1);
+  }
+  if (numCutbacks >= 2){
+    var c2 = Math.max(firstSafeWeek, Math.round(weeks * 0.65));
+    while (c2 <= lastSafeWeek && (!isSafeCutback(c2) || cutbackWeeks.indexOf(c2) >= 0)) c2++;
+    if (isSafeCutback(c2) && cutbackWeeks.indexOf(c2) < 0) cutbackWeeks.push(c2);
+  }
+  if (weeks >= 12 && cutbackWeeks.length === 0){
+    for (var cc = firstSafeWeek; cc <= lastSafeWeek; cc++){
+      if (isSafeCutback(cc)){ cutbackWeeks.push(cc); break; }
+    }
+  }
+
+  /* Final sim weeks (exclude cutbacks) */
+  var simWeeks = simWeeks_raw.filter(function(w){ return cutbackWeeks.indexOf(w) < 0; });
+
   var restWeekdays=cfg.restDays||new Set();
   var longRunWeekday=cfg.longDay!==undefined?cfg.longDay:6;
   var raceIdx=cfg.raceIdx;
   var out=[];
 
-  var bounds = computePhaseBoundaries(weeks);
   function phaseFor(w){
     if (w <= bounds.I) return 'I';
     if (w <= bounds.II) return 'II';
     if (w < bounds.phaseIVStart) return 'III';
     return 'IV';
   }
+
   var startVol=Math.min(currentKm,peakKm*0.75);
   var buildEnd = bounds.II;
-  var simWeeks = isMar
-    ? [weeks-6, weeks-4, weeks-3].filter(function(w){ return w > bounds.II && w < bounds.phaseIVStart; })
-    : [];
-  var midBlockCutbackWeek = null;
-  if (weeks >= 18){
-    var candidate = Math.round((bounds.II + bounds.phaseIVStart) / 2);
-    var minCandidate = bounds.II + 1;
-    var maxCandidate = bounds.phaseIVStart - 1;
-    if (candidate < minCandidate) candidate = minCandidate;
-    if (candidate > maxCandidate) candidate = maxCandidate;
-    while (candidate > minCandidate && (simWeeks.indexOf(candidate) >= 0 || candidate % 4 === 0)){ candidate--; }
-    midBlockCutbackWeek = candidate;
-  }
   var longBuildEnd = isMar ? Math.max(bounds.phaseIVStart - 1, buildEnd) : buildEnd;
 
   for(var w=1;w<=weeks;w++){
+    /* ---- Weekly volume ---- */
     var weekVol;
     if(w<=buildEnd){var t=(w-1)/Math.max(1,buildEnd-1);weekVol=Math.round(startVol+(peakKm-startVol)*t);}
     else if (w < bounds.phaseIVStart){weekVol=peakKm;}
-    else if (w === bounds.phaseIVStart){weekVol=Math.round(peakKm*0.7);}
-    else {weekVol=Math.round(peakKm*0.45);}
-    var isCutback = (midBlockCutbackWeek !== null && w === midBlockCutbackWeek);
-    var isModReduced = (!isCutback && w>2 && w < bounds.phaseIVStart && w%4===0);
-    if(isModReduced){ weekVol=Math.round(weekVol*0.85); }
-    if (isCutback){ weekVol = Math.round(weekVol * 0.72); }
+    else if (w === bounds.phaseIVStart){weekVol=Math.round(peakKm*0.68);}
+    else {weekVol=Math.round(peakKm*0.42);}
 
+    var isCutback = (cutbackWeeks.indexOf(w) >= 0);
+    var isModReduced = (!isCutback && w>2 && w < bounds.phaseIVStart && w%4===0);
+    if(isModReduced){ weekVol=Math.round(weekVol*0.88); }
+    if (isCutback){ weekVol = Math.round(weekVol * 0.78); }
+
+    /* ---- Day grid ---- */
     var days=new Array(7).fill(null);
     var isRaceWeek=(w===weeks),isTaperWeek=(w===bounds.phaseIVStart),isTTWeek=(ttWeek !== null && w===ttWeek);
     var isSimWeek=(simWeeks.indexOf(w)>=0);
     var phase=phaseFor(w);
+
+    /* ---- Long-run target (cutback-aware) ---- */
     var longProgress=Math.min(1, w / longBuildEnd);
     var thisLongTarget;
     if (isMar){ thisLongTarget = targetLongMin * (0.55 + 0.50 * longProgress); }
     else { thisLongTarget = targetLongMin * (0.55 + 0.45 * longProgress); }
+    if (isCutback) thisLongTarget *= 0.70;
+    if (isTaperWeek) thisLongTarget *= 0.60;
     thisLongTarget = Math.min(thisLongTarget, caps.Lmin);
+
     var weekDates=computeWeekDates(cfg.startDate,w);
     var weekLen=weekDates.length;
     var longDayIdx=-1;
@@ -1077,7 +1252,7 @@ function generatePlan(cfg){
 
     if(isRaceWeek){
       for(var i=0;i<weekLen;i++){
-        if(i===raceIdx){days[i]=raceDay('★ RACE — goal '+fmtTime(goalTime));continue;}
+        if(i===raceIdx){days[i]=raceDay('★ RACE — goal '+fmtTime(goalTime), goalDist/1000);continue;}
         if(isRest(i)){days[i]=restDay();continue;}
         var dOut=raceIdx-i;
         if(dOut<0){days[i]=restDay();continue;}
@@ -1090,8 +1265,7 @@ function generatePlan(cfg){
       }
     } else if(isTaperWeek){
       if(longDayIdx>=0){
-        var taperLongMin = Math.min(targetLongMin * 0.6, 16 * 60 * 60 / ((paces.E_slow + paces.E_fast)/2));
-        days[longDayIdx]=lRunKm(caps,weekVol,taperLongMin,paces,goalDist);
+        days[longDayIdx]=lRunKm(caps,weekVol,thisLongTarget,paces,goalDist);
       }
       for(var i=0;i<weekLen;i++){
         if(days[i]) continue;
@@ -1103,8 +1277,14 @@ function generatePlan(cfg){
       }
     } else {
       var longRunRef = null;
+      var specificProgress = 0;
+      if (phase === 'III'){
+        specificProgress = Math.max(0, Math.min(1, (w - bounds.II) / Math.max(1, bounds.phaseIVStart - bounds.II - 1)));
+      } else if (phase === 'IV'){
+        specificProgress = 1;
+      }
       if(longDayIdx>=0){
-        if(isSimWeek) days[longDayIdx]=racePaceSimLong(peakKm,goalDist,w);
+        if(isSimWeek && isMar) days[longDayIdx]=racePaceSimLong(peakKm,goalDist,w,specificProgress);
         else days[longDayIdx]=lRunKm(caps,weekVol,thisLongTarget,paces,goalDist);
         longRunRef = days[longDayIdx] ? days[longDayIdx].totalKm : null;
       }
@@ -1113,13 +1293,27 @@ function generatePlan(cfg){
       else if(phase==='II'){q1=rSession(caps,peakKm,w);q2=tSession(caps,peakKm,w);q3=eRunKm(Math.max(6,Math.round(weekVol*0.15)),8);}
       else if(phase==='III'){
         q1=iSession(caps,peakKm,w);
-        q2=tSession(caps,peakKm,w);
+        if (isMar && rehearsalNeeded){ q2 = mSession(caps, peakKm, w, goalPaceSecPerKm); }
+        else { q2=tSession(caps,peakKm,w); }
         q3=eRunKm(Math.max(5,Math.round(weekVol*0.15)),6);
         if (rehearsalNeeded && w >= bounds.phaseIVStart - 3 && w < bounds.phaseIVStart){ q2 = goalPaceRehearsal(goalPaceSecPerKm); }
       }
-      else {q1=rehearsalNeeded?goalPaceRehearsal(goalPaceSecPerKm):tSession(caps,peakKm,w);q2=rSession(caps,peakKm,w);q3=eRunKm(Math.max(5,Math.round(weekVol*0.15)),6);}
-      if(isTTWeek){q1=ttDay(ttDistanceLabel,ttDistance);}
+      else {
+        if (isMar && rehearsalNeeded){ q1 = mSession(caps, peakKm, w, goalPaceSecPerKm); }
+        else { q1 = rehearsalNeeded ? goalPaceRehearsal(goalPaceSecPerKm) : tSession(caps,peakKm,w); }
+        q2=rSession(caps,peakKm,w);
+        q3=eRunKm(Math.max(5,Math.round(weekVol*0.15)),6);
+      }
+
+      /* ---- TT WEEK: TT only, easy after ---- */
+      var ttDayIdxInWeek = -1;
+      if(isTTWeek){
+        q1 = ttDay(ttDistanceLabel, ttDistance);
+        q2 = null;
+        q3 = null;
+      }
       if(isCutback){ q1=null; q2=null; q3=null; }
+
       var qIndices=[];
       for(var i=0;i<weekLen;i++){ if(isRest(i)) continue; if(i===longDayIdx) continue; qIndices.push(i); }
       if(isTTWeek && !isCutback && qIndices.length > 0){
@@ -1134,14 +1328,25 @@ function generatePlan(cfg){
         }
         for (var j = 0; j < qIndices.length; j++) if (sortedQ.indexOf(qIndices[j]) < 0) sortedQ.push(qIndices[j]);
         qIndices = sortedQ;
+        ttDayIdxInWeek = qIndices[0];
       }
       if(qIndices[0]!==undefined&&q1)days[qIndices[0]]=q1;
       if(qIndices[1]!==undefined&&q2)days[qIndices[1]]=q2;
       if(qIndices[2]!==undefined&&q3)days[qIndices[2]]=q3;
+
+      /* Force easy day after TT */
+      if (ttDayIdxInWeek >= 0){
+        var nextDay = ttDayIdxInWeek + 1;
+        if (nextDay < weekLen && !days[nextDay]){
+          days[nextDay] = eRunKm(Math.max(4, Math.round(weekVol * 0.12)), 0);
+        }
+      }
+
       for(var i=0;i<weekLen;i++){
         if(days[i])continue;
         if(isRest(i)){days[i]=restDay();continue;}
-        days[i]=eRunKm(Math.max(4,Math.round(weekVol*0.14)),i%2===0?6:0);
+        var useStrides = (ttDayIdxInWeek < 0 || i !== ttDayIdxInWeek + 1) && (i % 2 === 0);
+        days[i]=eRunKm(Math.max(4,Math.round(weekVol*0.14)), useStrides ? 6 : 0);
       }
       if (isCutback){
         if (longDayIdx >= 0 && days[longDayIdx] && days[longDayIdx].isLongRun){
@@ -1165,19 +1370,35 @@ function generatePlan(cfg){
       }
     }
     while(days.length<7){days.push(null);}
+
+    /* ---- HARD CAP: never exceed peakKm (except race week, where race
+       distance is tracked separately and excluded from training total) ---- */
+    if (!isRaceWeek){
+      enforceWeeklyCap(days, peakKm, longDayIdx);
+    }
+
     var qCount=0;
     for(var i=0;i<7;i++){if(days[i]&&days[i].isQ){qCount++;days[i].qRank='Q'+qCount;}}
     var totalKm=0;
     for(var i=0;i<7;i++){var d=days[i];if(d&&isFinite(d.totalKm))totalKm+=d.totalKm;}
+
+    /* ---- Week-1 sanity check: flag if we forced above current volume ---- */
+    if (w === 1 && totalKm > currentKm * 1.15){
+      console.warn('[v21] Week 1 training (' + totalKm.toFixed(1) + ' km) exceeds current weekly (' + currentKm + ' km) by >15%. Session minimums forced the increase.');
+    }
+
     out.push({
       number:w, phase:phase, totalKm:totalKm, days:days, paces:paces,
       isTT:isTTWeek, isSim:isSimWeek, isCutback:isCutback, isModReduced:isModReduced,
-      startDate:cfg.startDate, weekLen:weekLen
+      startDate:cfg.startDate, weekLen:weekLen, isRaceWeek:isRaceWeek
     });
   }
-  return {weeks:out,caps:caps,paces:paces,rehearsalNeeded:rehearsalNeeded,ttWeek:ttWeek,ttDistance:ttDistance,ttDistanceLabel:ttDistanceLabel,startDate:cfg.startDate,bounds:bounds};
+  return {weeks:out,caps:caps,paces:paces,rehearsalNeeded:rehearsalNeeded,ttWeek:ttWeek,ttDistance:ttDistance,ttDistanceLabel:ttDistanceLabel,startDate:cfg.startDate,bounds:bounds,cutbackWeeks:cutbackWeeks,fitnessGap:fitnessGap,peakKm:peakKm};
 }
 
+/* ═══════════════════════════════════════════════════════════
+   BEGINNER PLAN (unchanged architecture)
+   ═══════════════════════════════════════════════════════════ */
 var BEGINNER_12 = [
   {sessions:['walk20','rw_1_1_x6','walk30']},
   {sessions:['walk20','rw_1_1_x8','walk35']},
@@ -1271,6 +1492,9 @@ function generateBeginnerPlan(cfg){
   return { weeks: out, startDate: cfg.startDate, isBeginner: true };
 }
 
+/* ═══════════════════════════════════════════════════════════
+   PURPOSE / PACE HELPERS
+   ═══════════════════════════════════════════════════════════ */
 function purposeFor(day, isBeginner){
   if (!day) return '';
   if (day.isBeginner) {
@@ -1299,7 +1523,7 @@ function purposeFor(day, isBeginner){
     if(t.indexOf('long')>=0)return 'Aerobic & muscular endurance — confidence for race distance.';
     return 'Builds aerobic base, strengthens heart, increases injury resistance.';
   }
-  if(z==='M'){ if(t.indexOf('+')>=0&&t.indexOf('km')>=0)return 'Race-pace rehearsal with fuel practice.'; return 'Race-pace rehearsal. Trains fat-burning, glycogen sparing.'; }
+  if(z==='M'){ if(t.indexOf('goal')>=0)return 'Goal-pace rehearsal. Trains the specific rhythm and rhythm of race day.'; if(t.indexOf('+')>=0&&t.indexOf('km')>=0)return 'Race-pace rehearsal with fuel practice.'; return 'Race-pace rehearsal. Trains fat-burning, glycogen sparing.'; }
   if(z==='T'){ if(t.indexOf('goal')>=0)return 'Goal-pace rehearsal — makes race pace feel familiar.'; if(t.indexOf('sharpener')>=0||d.indexOf('sharpener')>=0)return 'Keeps sharpness without adding fatigue before the race.'; return 'Improves lactate clearance — you hold a faster pace, longer.'; }
   if(z==='I')return 'Raises VO2max — your aerobic ceiling, lifting all paces.';
   if(z==='R')return 'Speed, economy, neuromuscular power. Full recovery = high quality.';
@@ -1318,8 +1542,10 @@ function inlinePace(day, paces, isBeginner){
   if(z==='tt') return 'all out';
   return '';
 }
-function escapeHtml(s){if(s===null||s===undefined)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
+/* ═══════════════════════════════════════════════════════════
+   VERDICT
+   ═══════════════════════════════════════════════════════════ */
 function renderVerdict(a,userName,cfg){
   var safeName = escapeHtml(userName);
   var html='';
@@ -1373,6 +1599,9 @@ function renderVerdict(a,userName,cfg){
 }
 function checkItem(name,value,detail,cls){return '<div class="check '+cls+'"><div class="check-name">'+name+'</div><div class="check-value">'+value+'</div><div class="check-detail">'+detail+'</div></div>';}
 
+/* ═══════════════════════════════════════════════════════════
+   PACE + LEGEND ROWS
+   ═══════════════════════════════════════════════════════════ */
 function paceRow(zone,name,primary,secondary){
   return '<div class="pace-row"><span class="zone-badge z-'+zone+'">'+zone+'</span><div><div class="pace-name">'+name+'</div><div class="pace-values"><span class="primary">'+primary+'</span>'+(secondary?'<span class="secondary">'+secondary+'</span>':'')+'</div></div></div>';
 }
@@ -1390,17 +1619,30 @@ function renderBeginnerLegend(){
     '<div class="pace-row"><span class="zone-badge z-runwalk">R/W</span><div><div class="pace-name">Run/walk</div><div class="pace-values"><span class="primary">Alternating intervals</span><span class="secondary">By time</span></div></div></div>'+
     '<div class="pace-row"><span class="zone-badge z-E">E</span><div><div class="pace-name">Continuous run</div><div class="pace-values"><span class="primary">Easy, conversational</span><span class="secondary">Able to talk</span></div></div></div>';
 }
+
+/* ═══════════════════════════════════════════════════════════
+   WEEK RENDER
+   ═══════════════════════════════════════════════════════════ */
 function renderWeek(w,startDate){
   var dates=computeWeekDates(startDate,w.number);
   var weekLen=dates.length;
   var paces=w.paces || null;
   var isBeginner = !!w.isBeginner;
   var html='';
+  /* Race distance for this week (if race week) */
+  var raceKm = 0;
+  for (var ri = 0; ri < weekLen; ri++){
+    if (w.days[ri] && w.days[ri].zone === 'race' && w.days[ri].raceKm) raceKm = w.days[ri].raceKm;
+  }
+  var headerTotal = w.totalKm.toFixed(0) + (isBeginner ? ' min' : ' km');
+  if (raceKm > 0){
+    headerTotal += ' <span class="race-bit">+ ' + raceKm.toFixed(1) + ' km race</span>';
+  }
   html+='<div class="week-card">';
   html+='<div class="week-head"><div><span class="wk-num">Week '+w.number+'</span><span class="wk-phase phase-'+w.phase+'">Phase '+w.phase+'</span><span class="wk-dates">'+fmtDateShort(dates[0])+' – '+fmtDateShort(dates[weekLen-1])+'</span>';
   if(w.isCutback) html+='<span style="font-size:10.5px;color:#16a34a;font-weight:600;margin-left:8px">↻ Recovery week</span>';
   if(w.isModReduced && !w.isCutback) html+='<span style="font-size:10.5px;color:#16a34a;font-weight:600;margin-left:8px">↓ Reduced</span>';
-  html+='</div><span class="wk-total">'+w.totalKm.toFixed(0)+' '+(isBeginner?'min':'km')+'</span></div>';
+  html+='</div><span class="wk-total">'+headerTotal+'</span></div>';
   html+='<table class="week-grid"><tr class="header-row">';
   for(var i=0;i<weekLen;i++)html+='<td><div class="header-day"><span>'+dayNameOf(dates[i]).toUpperCase()+'</span><span class="header-date">'+fmtDateShort(dates[i])+'</span></div></td>';
   html+='</tr><tr>';
@@ -1436,6 +1678,7 @@ function renderWeek(w,startDate){
       if (day.totalMin > 0) metaParts.push(day.totalMin+' min');
     } else {
       if(day.totalKm>0) metaParts.push(day.totalKm.toFixed(1)+' km');
+      if (zone === 'race' && day.raceKm > 0) metaParts.push('<span class="pace-bit">'+day.raceKm.toFixed(1)+' km race</span>');
       var paceStr=inlinePace(day,paces,false);
       if(paceStr){ metaParts.push('<span class="pace-bit">'+paceStr+'</span>'); }
     }
@@ -1467,6 +1710,10 @@ function weekWhy(w){
   if(p2==='III')return 'Interval work raises VO2max; sustained T and M runs build race-specific endurance.';
   return 'Goal-pace rehearsal and reduced volume — arriving at the race fresh and sharp.';
 }
+
+/* ═══════════════════════════════════════════════════════════
+   PLAN RENDER
+   ═══════════════════════════════════════════════════════════ */
 function renderPlan(result,meta,userName){
   var weeks=result.weeks,caps=result.caps,paces=result.paces;
   var isBeginner = !!result.isBeginner;
@@ -1522,6 +1769,9 @@ function ttSelectOptions(selectedMeters){
   return html;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════ */
 var state={
   analysis:null,plan:null,planOriginal:null,planMeta:null,cfg:null,
   allRestDays:new Set(),longDay:6,currentVdotOverride:null,userName:'',
@@ -1530,6 +1780,9 @@ var state={
   planType:'standard',beginnerRestDays:new Set(),beginnerLongDay:6
 };
 
+/* ═══════════════════════════════════════════════════════════
+   READ CONFIG
+   ═══════════════════════════════════════════════════════════ */
 function readCfgStandard(){
   var rawPeak=document.getElementById('peakKm').value;
   var rawCur=document.getElementById('currentKm').value;
@@ -1570,6 +1823,10 @@ function readCfgBeginner(){
     restDays:state.beginnerRestDays
   };
 }
+
+/* ═══════════════════════════════════════════════════════════
+   VALIDATE
+   ═══════════════════════════════════════════════════════════ */
 function validateStandard(cfg){
   var missing=[];
   var fieldMap={userName:'field-userName',startDate:'field-startDate',raceDate:'field-raceDate',curDist:'field-curDist',curTime:'field-curTime',currentKm:'field-currentKm',goalDist:'field-goalDist',goalTime:'field-goalTime',peakKm:'field-peakKm'};
@@ -1645,6 +1902,7 @@ function updateInputState(){
   else {btn.disabled=true;btn.textContent='Fill all fields →';status.className='input-status missing';status.textContent='Still needed: '+missing.join(', ')+'.';}
 }
 function runAnalysis(){ if (state.planType === 'beginner'){ runBeginnerAnalysis(); } else { runStandardAnalysis(); } }
+
 function runStandardAnalysis(){
   var cfg=readCfgStandard();
   var missing=validateStandard(cfg);
@@ -1716,6 +1974,10 @@ function runBeginnerAnalysis(){
   updateFeelNote();
   document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
 }
+
+/* ═══════════════════════════════════════════════════════════
+   RECALIBRATE (adaptive VDOT — unchanged)
+   ═══════════════════════════════════════════════════════════ */
 function handleRecalibrate(){
   var dist=parseFloat(document.getElementById('ttDistance').value);
   var tRes = readTimeField('ttTime');
@@ -1797,6 +2059,9 @@ function renderGoalCheck(projectedTime,projectedVdot,currentVdot){
 }
 function dismissGoalCheck(){ var panel=document.getElementById('goalCheck'); if(!panel)return; panel.remove(); }
 
+/* ═══════════════════════════════════════════════════════════
+   REST DAYS + TABS + SUGGEST
+   ═══════════════════════════════════════════════════════════ */
 function refreshRestDaysUI(){
   var longDay=parseInt(document.getElementById('longRunDay').value);
   state.longDay=longDay;
@@ -1888,6 +2153,9 @@ document.getElementById('suggestBtn').addEventListener('click',function(e){
 });
 document.addEventListener('click',function(){if(popover){popover.remove();popover=null;}});
 
+/* ═══════════════════════════════════════════════════════════
+   FEEL PANEL
+   ═══════════════════════════════════════════════════════════ */
 var feelPanel=document.getElementById('feelPanel');
 var feelHead=document.getElementById('feelHead');
 var feelToggle=document.getElementById('feelToggle');
@@ -2021,6 +2289,9 @@ function adjustWorkout(day, mode, isFirstQOfWeek){
   return null;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════ */
 setupTimeField('curTime','curTimeHint');
 setupTimeField('goalTime','goalTimeHint');
 
