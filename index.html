@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pre-Flight Coach v24 â€” Recovery, Taper & Pace Clarity</title>
+<title>Pre-Flight Coach v24</title>
 <style>
   :root{
     --bg:#f5f5f7;--surface:#fff;--border:#e2e2e8;--text:#16161c;--muted:#6b6b78;
@@ -494,7 +494,7 @@
           <div class="field" id="field-bAbility">
             <label>Current ability <span class="req">*</span></label>
             <select id="bAbility">
-              <option value="">â€” select â€”</option>
+              <option value="">” select ”</option>
               <option value="none">I don't run at all yet</option>
               <option value="5min">I can run about 5 minutes without stopping</option>
               <option value="20min">I can run about 20 minutes without stopping</option>
@@ -517,7 +517,7 @@
           <div class="field" id="field-bGoal">
             <label>What are you training for? <span class="req">*</span></label>
             <select id="bGoal">
-              <option value="">â€” select â€”</option>
+              <option value=""> ” select ”</option>
               <option value="5k">Finish a 5K</option>
               <option value="10k">Finish a 10K</option>
               <option value="hm">Finish a half marathon</option>
@@ -527,31 +527,31 @@
       </div>
     </div>
 
-    <button class="btn primary" id="analyzeBtn" style="margin-top:6px;width:100%;padding:11px" disabled>Fill all fields â†’</button>
+    <button class="btn primary" id="analyzeBtn" style="margin-top:6px;width:100%;padding:11px" disabled>Fill all fields </button>
     <div class="input-status missing" id="inputStatus">Complete the form above to generate a plan.</div>
   </div>
 
   <div class="feel-panel collapsed no-print" id="feelPanel">
     <div class="fp-head" id="feelHead">
-      <span style="font-size:20px">ðŸ©º</span>
+      <span style="font-size:20px"> </span>
       <span class="fp-title">Not feeling 100%? Adjust the next few days</span>
-      <span class="fp-toggle" id="feelToggle">open â–¾</span>
+      <span class="fp-toggle" id="feelToggle">open</span>
     </div>
     <div class="fp-body">
-      <div class="fp-intro">Training through fatigue, illness, or a busy stretch is the fastest way to lose ground. Pick what's happening and we'll ease the plan for a set window â€” then resume normally.</div>
+      <div class="fp-intro">Training through fatigue, illness, or a busy stretch is the fastest way to lose ground. Pick what's happening and we'll ease the plan for a set window  then resume normally.</div>
       <div class="mode-grid">
         <button class="mode-card" data-mode="fatigue">
-          <span class="mc-icon">ðŸ˜´</span>
+          <span class="mc-icon"> </span>
           <span class="mc-name">Fatigued</span>
           <span class="mc-desc">Heavy legs, poor sleep. Cut volume ~40%, cap intensity at T-pace.</span>
         </button>
         <button class="mode-card" data-mode="sick">
-          <span class="mc-icon">ðŸ¤’</span>
+          <span class="mc-icon"> </span>
           <span class="mc-name">Sick</span>
           <span class="mc-desc">Fever, chest, or flu. Full rest or short walks only.</span>
         </button>
         <button class="mode-card" data-mode="busy">
-          <span class="mc-icon">â±ï¸</span>
+          <span class="mc-icon"> </span>
           <span class="mc-name">Busy</span>
           <span class="mc-desc">Time-crunched. Halve volume, keep one quality session.</span>
         </button>
@@ -589,8 +589,8 @@
     <div class="fb-desc">Found a bug, an odd workout, or just want to share how the plan went? Send a note â€” this is a work in progress and every bit of feedback helps.</div>
     <div class="fb-email" id="feedbackEmail">ravikorurolu82@gmail.com</div>
     <div class="fb-actions">
-      <a class="fb-btn" id="feedbackLink" href="mailto:ravikorurolu82@gmail.com?subject=Pre-Flight%20Coach%20v22%20Feedback">âœ‰ Open in email app</a>
-      <button class="fb-btn ghost" id="copyEmailBtn" type="button">ðŸ“‹ Copy email address</button>
+      <a class="fb-btn" id="feedbackLink" href="mailto:ravikorurolu82@gmail.com?subject=Pre-Flight%20Coach%20v22%20Feedback"> Open in email app</a>
+      <button class="fb-btn ghost" id="copyEmailBtn" type="button"> ‹ Copy email address</button>
     </div>
   </div>
 
@@ -621,7 +621,7 @@ var Vdot={
 var PCT={E_SLOW:0.62,E_FAST:0.74,M:0.81,T:0.88,I:0.98,R:1.06};
 
 /* ============================================================
-   TIME FIELD HELPERS â€” three segmented inputs, one value
+   TIME FIELD HELPERS  three segmented inputs, one value
 ================================================================ */
 function readTimeField(prefix){
   var hEl = document.getElementById(prefix+'H');
@@ -700,14 +700,14 @@ function setupTimeField(prefix){
 
 function fmtTime(sec,opt){
   opt=opt||{};
-  if(!isFinite(sec)||sec<=0)return 'â€”';
+  if(!isFinite(sec)||sec<=0)return;
   var t=Math.round(sec),h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;
   if(h>0)return h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
   if(opt.alwaysMin||m>0)return m+':'+(s<10?'0':'')+s;
   return s+'s';
 }
 function parseTime(str, distanceM){
-  /* Kept for backward compat â€” used in prompt-based goal reset */
+  /* Kept for backward compat used in prompt-based goal reset */
   if(!str||!String(str).trim())return null;
   var trimmed = String(str).trim();
   if (trimmed.indexOf(':') >= 0){
