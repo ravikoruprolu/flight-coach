@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
-   Juju Mama — Pre-Flight Coach chatbot (external module)
+   Juju — Pre-Flight Coach chatbot (external module)
+   The chubby Dragon Warrior panda who knows Daniels' formula.
    Loads after the main inline script. Uses globals:
    state, generatePlan, analyze, Vdot, fmtTime, escapeHtml,
    writeTimeField, updateTimeFieldDisplay, updateInputState,
@@ -11,22 +12,22 @@
 
 /* ─────────── 1. CSS ─────────── */
 var JUJU_CSS = `
-.juju-fab{position:fixed;bottom:24px;right:24px;width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#ec4899);border:none;cursor:pointer;box-shadow:0 8px 24px rgba(139,92,246,.45);z-index:200;display:flex;align-items:center;justify-content:center;font-size:34px;transition:transform .2s;animation:juju-bob 1.4s ease-in-out infinite;overflow:visible}
+.juju-fab{position:fixed;bottom:24px;right:24px;width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#0f172a,#10b981);border:none;cursor:pointer;box-shadow:0 8px 24px rgba(16,185,129,.45);z-index:200;display:flex;align-items:center;justify-content:center;font-size:34px;transition:transform .2s;animation:juju-bob 1.4s ease-in-out infinite;overflow:visible}
 .juju-fab:hover{transform:scale(1.1)}
-.juju-fab::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(139,92,246,.4);animation:juju-pulse 2s ease-out infinite}
-.juju-fab .runner{display:inline-block;animation:juju-run .55s ease-in-out infinite}
+.juju-fab::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(16,185,129,.4);animation:juju-pulse 2s ease-out infinite}
+.juju-fab .runner{display:inline-block;animation:juju-run .65s ease-in-out infinite}
 .juju-fab .speed-line{position:absolute;left:-16px;top:50%;width:14px;height:2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85));border-radius:2px;animation:juju-speed 1.2s linear infinite;opacity:0}
 .juju-fab .speed-line:nth-child(1){top:34%;animation-delay:.15s}
 .juju-fab .speed-line:nth-child(2){top:50%;animation-delay:.45s}
 .juju-fab .speed-line:nth-child(3){top:66%;animation-delay:.75s}
 @keyframes juju-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@keyframes juju-run{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-2px) rotate(4deg)}}
+@keyframes juju-run{0%,100%{transform:translateY(0) rotate(-6deg) scaleY(0.96)}25%{transform:translateY(-3px) rotate(0deg) scaleY(1)}50%{transform:translateY(0) rotate(6deg) scaleY(0.96)}75%{transform:translateY(-3px) rotate(0deg) scaleY(1)}}
 @keyframes juju-pulse{0%{transform:scale(.9);opacity:.8}100%{transform:scale(1.35);opacity:0}}
 @keyframes juju-speed{0%{opacity:0;transform:translateX(0)}40%{opacity:.85}100%{opacity:0;transform:translateX(-28px)}}
 .juju-drawer{position:fixed;bottom:108px;right:24px;width:400px;max-width:calc(100vw - 32px);height:620px;max-height:calc(100vh - 140px);background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.22);z-index:199;display:none;flex-direction:column;overflow:hidden;animation:juju-slide-in .25s ease-out}
 .juju-drawer.open{display:flex}
 @keyframes juju-slide-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.juju-header{padding:12px 16px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;display:flex;align-items:center;gap:10px;position:relative}
+.juju-header{padding:12px 16px;background:linear-gradient(135deg,#0f172a,#10b981);color:#fff;display:flex;align-items:center;gap:10px;position:relative}
 .juju-header .juju-avatar{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .juju-header .juju-title{font-weight:700;font-size:15px;line-height:1.1}
 .juju-header .juju-sub{font-size:11px;opacity:.85;margin-top:2px}
@@ -38,7 +39,7 @@ var JUJU_CSS = `
 .juju-settings label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px;margin-top:10px}
 .juju-settings label:first-of-type{margin-top:0}
 .juju-settings select,.juju-settings input{width:100%;font:inherit;font-size:12.5px;padding:7px 9px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
-.juju-settings select:focus,.juju-settings input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(139,92,246,.15)}
+.juju-settings select:focus,.juju-settings input:focus{outline:none;border-color:#10b981;box-shadow:0 0 0 2px rgba(16,185,129,.15)}
 .juju-settings .juju-settings-note{font-size:10.5px;color:var(--muted);line-height:1.45;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
 .juju-messages{flex:1;overflow-y:auto;padding:16px;background:#fafafb;display:flex;flex-direction:column;gap:10px}
 .juju-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;word-wrap:break-word;animation:juju-msg-in .2s ease-out}
@@ -51,8 +52,8 @@ var JUJU_CSS = `
 .juju-msg ul{margin:6px 0 4px 18px}
 .juju-msg li{margin-bottom:3px}
 .juju-msg code{font-family:var(--mono);font-size:12px;background:#f0f0f4;color:var(--text);padding:1px 5px;border-radius:4px}
-.juju-msg .juju-action{display:block;margin-top:8px;background:var(--purple);color:#fff;border:none;padding:7px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;width:100%}
-.juju-msg .juju-action:hover{background:#7c3aed}
+.juju-msg .juju-action{display:block;margin-top:8px;background:#10b981;color:#fff;border:none;padding:7px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;width:100%}
+.juju-msg .juju-action:hover{background:#059669}
 .juju-typing{display:flex;gap:4px;padding:10px 6px;align-self:flex-start}
 .juju-typing span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:juju-typing 1.2s infinite}
 .juju-typing span:nth-child(2){animation-delay:.15s}
@@ -60,29 +61,29 @@ var JUJU_CSS = `
 @keyframes juju-typing{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
 .juju-chips{padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;background:var(--surface);border-top:1px solid var(--border);max-height:80px;overflow-y:auto}
 .juju-chip{font-size:11px;padding:5px 10px;border-radius:999px;border:1px solid var(--border);background:#fafafb;color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap}
-.juju-chip:hover{border-color:var(--purple);background:#f5f3ff;color:var(--purple)}
+.juju-chip:hover{border-color:#10b981;background:#ecfdf5;color:#065f46}
 .juju-input-row{display:flex;padding:10px 12px;gap:8px;background:var(--surface);border-top:1px solid var(--border)}
 .juju-input-row input{flex:1;font:inherit;font-size:13px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
-.juju-input-row input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 3px rgba(139,92,246,.12)}
-.juju-send{background:var(--purple);color:#fff;border:none;width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:background .15s}
-.juju-send:hover:not(:disabled){background:#7c3aed}
-.juju-send:disabled{background:#c4b5fd;cursor:not-allowed}
+.juju-input-row input:focus{outline:none;border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.12)}
+.juju-send{background:#10b981;color:#fff;border:none;width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.juju-send:hover:not(:disabled){background:#059669}
+.juju-send:disabled{background:#a7f3d0;cursor:not-allowed}
 @media print{.juju-fab,.juju-drawer{display:none!important}}
 `;
 
 /* ─────────── 2. HTML ─────────── */
 var JUJU_HTML = `
-<button class="juju-fab" id="jujuFab" aria-label="Open Juju Mama chatbot">
+<button class="juju-fab" id="jujuFab" aria-label="Open Juju chatbot">
   <span class="speed-line"></span>
   <span class="speed-line"></span>
   <span class="speed-line"></span>
-  <span class="runner">🏃‍♀️</span>
+  <span class="runner">🐼</span>
 </button>
-<div class="juju-drawer" id="jujuDrawer" role="dialog" aria-label="Juju Mama chatbot">
+<div class="juju-drawer" id="jujuDrawer" role="dialog" aria-label="Juju chatbot">
   <div class="juju-header">
-    <div class="juju-avatar">🏃‍♀️</div>
+    <div class="juju-avatar">🐼</div>
     <div>
-      <div class="juju-title">Juju Mama</div>
+      <div class="juju-title">Juju</div>
       <div class="juju-sub" id="jujuStatus">Offline · built-in knowledge</div>
     </div>
     <button class="juju-close settings" id="jujuSettingsBtn" title="Settings">⚙</button>
@@ -105,7 +106,7 @@ var JUJU_HTML = `
   <div class="juju-messages" id="jujuMessages"></div>
   <div class="juju-chips" id="jujuChips"></div>
   <div class="juju-input-row">
-    <input type="text" id="jujuInput" placeholder="Ask Juju Mama anything about running…" autocomplete="off">
+    <input type="text" id="jujuInput" placeholder="Ask Juju anything about running…" autocomplete="off">
     <button class="juju-send" id="jujuSend" aria-label="Send">↑</button>
   </div>
 </div>
@@ -114,7 +115,7 @@ var JUJU_HTML = `
 /* ─────────── 3. Inject ─────────── */
 function injectCSS(){
   var el = document.createElement('style');
-  el.id = 'juju-mama-css';
+  el.id = 'juju-css';
   el.textContent = JUJU_CSS;
   document.head.appendChild(el);
 }
@@ -440,11 +441,11 @@ function jujuFormApply(step, val){
 function jujuSystemPrompt(){
   var G = window;
   var lines = [
-    "You are Juju Mama, an expert running coach embedded in Pre-Flight Coach.",
+    "You are Juju, a chubby kung-fu panda running coach embedded in Pre-Flight Coach.",
     "You know Jack Daniels' Running Formula deeply — VDOT, E/M/T/I/R paces, periodization, cutbacks, taper.",
     "You also know Pfitzinger, Lydiard, 80/20, and general sports science.",
     "",
-    "VOICE: warm, concise, practical. Plain language.",
+    "VOICE: warm, concise, practical, a little playful (you're a panda who runs). Plain language.",
     "FORMAT: short paragraphs. **bold** key terms. Bullets when listing.",
     "HARD RULES:",
     "- Never diagnose medical conditions. For pain/injury, recommend a physio.",
@@ -666,7 +667,7 @@ function jujuInit(){
     jujuState.open = !jujuState.open;
     drawer.classList.toggle('open', jujuState.open);
     if (jujuState.open && jujuState.messages.length === 0){
-      jujuAddMessage('bot', "Hey — I'm **Juju Mama** 🏃‍♀️\n\nI know Jack Daniels' *Running Formula* inside out, plus Pfitzinger, Lydiard, and 80/20.\n\nAsk me anything about training. I can also **explain your plan**, **adjust values** (*\"change peak to 100\"*), or **walk you through filling the form**.\n\nWhat's on your mind?");
+      jujuAddMessage('bot', "Hey — I'm **Juju** 🐼\n\nPart panda, part coach. I know Jack Daniels' *Running Formula* inside out, plus Pfitzinger, Lydiard, and 80/20.\n\nAsk me anything about training. I can also **explain your plan**, **adjust values** (*\"change peak to 100\"*), or **walk you through filling the form**.\n\nWhat's on your mind?");
       jujuState.messages.push({ role:'assistant', content:'greeting' });
     }
     if (jujuState.open) setTimeout(function(){ input.focus(); }, 50);
