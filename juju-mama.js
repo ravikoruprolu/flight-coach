@@ -667,7 +667,7 @@ function jujuInit(){
     jujuState.open = !jujuState.open;
     drawer.classList.toggle('open', jujuState.open);
     if (jujuState.open && jujuState.messages.length === 0){
-      jujuAddMessage('bot', "Hey — I'm **Juju** 🐼\n\nPart panda, part coach. I know Jack Daniels' *Running Formula* inside out, plus Pfitzinger, Lydiard, and 80/20.\n\nAsk me anything about training. I can also **explain your plan**, **adjust values** (*\"change peak to 100\"*), or **walk you through filling the form**.\n\nWhat's on your mind?");
+      jujuAddMessage('bot', "Hey,\nI'm **Juju Mama** 🐼.\nYour Dragon Warrior, sent by Master Shifu.\n\nMy kung fu is running — and I'm here to help you train, tweak, and crush your race. Ask me anything, or say *\"help me fill the form\"* and I'll walk you through it. Skadoosh. 🥋");
       jujuState.messages.push({ role:'assistant', content:'greeting' });
     }
     if (jujuState.open) setTimeout(function(){ input.focus(); }, 50);
