@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   Juju — Pre-Flight Coach chatbot (external module)
+   Juju Mama — Pre-Flight Coach chatbot (external module)
    The chubby Dragon Warrior panda who knows Daniels' formula.
    Loads after the main inline script. Uses globals:
    state, generatePlan, analyze, Vdot, fmtTime, escapeHtml,
@@ -9,6 +9,9 @@
    ═══════════════════════════════════════════════════════════ */
 (function(){
 'use strict';
+
+/* ─────────── 0. CONFIG ─────────── */
+var JUJU_PROXY_URL = 'https://juju-proxy.ravikoruprolu82.workers.dev';
 
 /* ─────────── 1. CSS ─────────── */
 var JUJU_CSS = `
@@ -73,17 +76,17 @@ var JUJU_CSS = `
 
 /* ─────────── 2. HTML ─────────── */
 var JUJU_HTML = `
-<button class="juju-fab" id="jujuFab" aria-label="Open Juju chatbot">
+<button class="juju-fab" id="jujuFab" aria-label="Open Juju Mama chatbot">
   <span class="speed-line"></span>
   <span class="speed-line"></span>
   <span class="speed-line"></span>
   <span class="runner">🐼</span>
 </button>
-<div class="juju-drawer" id="jujuDrawer" role="dialog" aria-label="Juju chatbot">
+<div class="juju-drawer" id="jujuDrawer" role="dialog" aria-label="Juju Mama chatbot">
   <div class="juju-header">
     <div class="juju-avatar">🐼</div>
     <div>
-      <div class="juju-title">Juju</div>
+      <div class="juju-title">Juju Mama</div>
       <div class="juju-sub" id="jujuStatus">Offline · built-in knowledge</div>
     </div>
     <button class="juju-close settings" id="jujuSettingsBtn" title="Settings">⚙</button>
@@ -92,22 +95,22 @@ var JUJU_HTML = `
   <div class="juju-settings" id="jujuSettings">
     <label>AI Mode</label>
     <select id="jujuMode">
-       <option value="juju">Juju (no setup needed)</option>
+      <option value="juju">Juju (no setup needed)</option>
       <option value="offline">Offline (built-in knowledge)</option>
       <option value="openai">OpenAI (GPT)</option>
       <option value="anthropic">Anthropic (Claude)</option>
       <option value="gemini">Google Gemini</option>
     </select>
-    <label>API Key</label>
+    <label id="jujuKeyLabel">API Key</label>
     <input type="password" id="jujuApiKey" placeholder="paste your key" autocomplete="off">
-    <label>Model (optional)</label>
+    <label id="jujuModelLabel">Model (optional)</label>
     <input type="text" id="jujuModel" placeholder="leave blank for default">
     <div class="juju-settings-note">Your key is stored in this browser only. It's sent only to the provider you select. Never shared with the Pre-Flight Coach creator.</div>
   </div>
   <div class="juju-messages" id="jujuMessages"></div>
   <div class="juju-chips" id="jujuChips"></div>
   <div class="juju-input-row">
-    <input type="text" id="jujuInput" placeholder="Ask Juju anything about running…" autocomplete="off">
+    <input type="text" id="jujuInput" placeholder="Ask Juju Mama anything about running…" autocomplete="off">
     <button class="juju-send" id="jujuSend" aria-label="Send">↑</button>
   </div>
 </div>
@@ -131,127 +134,99 @@ var JUJU_KB = [
   { id:'vdot-what', cat:'VDOT',
     kw:['what is vdot','vdot meaning','explain vdot','what does vdot mean','vdot stand for'],
     syn:['vdot'],
-    a:`**VDOT** is Jack Daniels' single-number fitness score. It combines VO₂max (your aerobic engine) with running economy (how efficiently you use oxygen) into one value, from about **30 (recreational) to 85 (elite)**.\n\nYour recent race performance is the input — a 5K in 22:00 gives roughly VDOT 40. Every training pace in your plan derives from this number. When you race faster, VDOT rises and all your paces shift faster automatically.\n\n**Why it matters:** it turns "I feel fitter" into a precise, comparable number. A 1-point VDOT gain is roughly a **15–20 second 5K improvement**.` },
-
+    a:`**VDOT** is Jack Daniels' single-number fitness score. It combines VO₂max (your aerobic engine) with running economy (how efficiently you use oxygen) into one value, from about **30 (recreational) to 85 (elite)**.\n\nYour recent race performance is the input — a 5K in 22:00 gives roughly VDOT 40. Every training pace in your plan derives from this number.\n\n**Why it matters:** it turns "I feel fitter" into a precise, comparable number. A 1-point VDOT gain is roughly a **15–20 second 5K improvement**.` },
   { id:'paces-what', cat:'Paces',
     kw:['what are the paces','explain paces','e m t i r','pace zones','training paces','what are the zones'],
     syn:['paces','zones'],
-    a:`Daniels defines **5 training paces**. Each has a purpose, not just a speed:\n\n**E — Easy** · 59–74% VO₂max. Conversational. Builds aerobic base. Most of your weekly km.\n\n**M — Marathon** · ~81% VO₂max. Pace you could hold for 2.5+ hours. Trains fat-burning.\n\n**T — Threshold** · ~88% VO₂max. "Comfortably hard." Improves lactate clearance.\n\n**I — Interval** · ~98% VO₂max. 3–5 min reps with jog recovery. Raises your VO₂max ceiling.\n\n**R — Repetition** · ~106% VO₂max. Short, fast, full recovery. Neuromuscular speed.\n\n**Weekly quality budget:** ~20% of weekly km maximum. The rest is E.` },
-
+    a:`Daniels defines **5 training paces**:\n\n**E — Easy** · 59–74% VO₂max. Conversational. Most of your weekly km.\n**M — Marathon** · ~81% VO₂max. Pace you could hold 2.5+ hours.\n**T — Threshold** · ~88% VO₂max. "Comfortably hard."\n**I — Interval** · ~98% VO₂max. 3–5 min reps with jog recovery.\n**R — Repetition** · ~106% VO₂max. Short, fast, full recovery.\n\n**Weekly quality budget:** ~20% of weekly km maximum.` },
   { id:'e-pace', cat:'Paces',
     kw:['what is easy pace','e pace','conversational pace','how slow easy','easy run pace'],
     syn:['easy','e pace'],
-    a:`**E pace** is 59–74% of your VDOT-derived VO₂max — a pace where you can hold a **full conversation**.\n\nThe mistake almost every runner makes: running easy runs too fast. If you can't say *"the quick brown fox"* without gasping, you're not at E.\n\n**Why it matters:** E pace builds capillaries, mitochondria, and fat-burning enzymes. Going faster doesn't accelerate that; it adds fatigue that ruins tomorrow's quality session.\n\n**If in doubt:** slow down 30 sec/km.` },
-
+    a:`**E pace** is 59–74% of your VO₂max — a pace where you can hold a **full conversation**.\n\nThe mistake almost every runner makes: running easy runs too fast. If you can't say *"the quick brown fox"* without gasping, you're not at E.\n\n**Why it matters:** E pace builds capillaries, mitochondria, and fat-burning enzymes. Going faster doesn't accelerate that; it adds fatigue.\n\n**If in doubt:** slow down 30 sec/km.` },
   { id:'t-pace', cat:'Paces',
     kw:['what is threshold','t pace','threshold pace','tempo pace','lactate threshold','what is tempo'],
     syn:['threshold','tempo'],
-    a:`**T pace** is "comfortably hard" — around 88% VO₂max, or roughly the pace you could race for **60 minutes all-out**.\n\n**Feel test:** you can speak 3–4 words at a time. Breathing is rhythmic.\n\n**Purpose:** raises the speed at which lactate accumulates faster than you clear it.\n\n**Typical doses:**\n- Cruise intervals: 3–6 × 1 km T with 1 min jog\n- Continuous tempo: 20 min at T\n- Long reps: 3 × 2 km T with 2 min jog\n\n**Cap:** ~10% of weekly km per session.` },
-
+    a:`**T pace** is "comfortably hard" — around 88% VO₂max, or roughly the pace you could race for **60 minutes all-out**.\n\n**Feel test:** you can speak 3–4 words at a time.\n\n**Purpose:** raises the speed at which lactate accumulates faster than you clear it.\n\n**Typical doses:**\n- Cruise intervals: 3–6 × 1 km T with 1 min jog\n- Continuous tempo: 20 min at T\n- Long reps: 3 × 2 km T with 2 min jog\n\n**Cap:** ~10% of weekly km per session.` },
   { id:'i-pace', cat:'Paces',
     kw:['what is interval pace','i pace','what is interval training','why intervals'],
     syn:['interval','i pace'],
-    a:`**I pace (Interval)** trains your VO₂max — the maximum rate your body can use oxygen.\n\n**Dose:** 3–5 min hard reps with ~equal-time jog recovery. Total hard time per session: **~8% of weekly km maximum**.\n\n**Why "ceiling" matters:** VO₂max is your engine size. Everything below scales with it.\n\n**Typical sessions:**\n- 5 × 1,000 m I, 3 min jog\n- 6 × 800 m I, 2:30 jog\n- 8 × 3 min hard, 2 min jog\n\n**Feel:** hard but controlled. Reps should be even.` },
-
+    a:`**I pace (Interval)** trains your VO₂max.\n\n**Dose:** 3–5 min hard reps with ~equal-time jog recovery. Total hard time per session: **~8% of weekly km maximum**.\n\n**Typical sessions:**\n- 5 × 1,000 m I, 3 min jog\n- 6 × 800 m I, 2:30 jog\n- 8 × 3 min hard, 2 min jog\n\n**Feel:** hard but controlled. Reps should be even.` },
   { id:'r-pace', cat:'Paces',
     kw:['what is rep training','r pace','repetition pace','why 200s','what are reps'],
     syn:['repetition','r pace'],
-    a:`**R pace (Repetition)** is faster than mile race pace — about 106% of VDOT. Reps are **short** (200–400 m) with **full recovery**.\n\n**What it trains:** running economy, neuromuscular coordination, raw speed. **Not** VO₂max — recovery is too long.\n\n**Weekly dose:** very small. ~5% of weekly km, never more than 8 km.\n\n**Typical sessions:**\n- 8 × 200 m R, 200 m jog\n- 6 × 400 m R, 400 m jog\n\n**Key rule:** if you're not fully recovered before the next rep, you're doing I work, not R work.` },
-
+    a:`**R pace (Repetition)** is faster than mile race pace — about 106% of VDOT. Reps are **short** (200–400 m) with **full recovery**.\n\n**What it trains:** running economy, neuromuscular coordination, raw speed. **Not** VO₂max.\n\n**Weekly dose:** very small. ~5% of weekly km, never more than 8 km.\n\n**Key rule:** if you're not fully recovered before the next rep, you're doing I work, not R work.` },
   { id:'m-pace', cat:'Paces',
     kw:['what is marathon pace','m pace','goal pace'],
     syn:['marathon pace','m pace'],
-    a:`**M pace** is your projected race-day marathon pace — the pace you believe you can hold for 42.195 km. About 81% VO₂max.\n\n**Two uses:**\n\n1. **Marathon-specific long runs** — E + M combinations teach fat-burning and glycogen sparing.\n2. **Race rehearsal** — practice pacing, fueling, and mental rhythm at goal pace.\n\n**Pitfall:** don't turn every long run into an M run. One M session per week max during the specific phase.` },
-
+    a:`**M pace** is your projected race-day marathon pace. About 81% VO₂max.\n\n**Two uses:**\n\n1. **Marathon-specific long runs** — E + M combinations teach fat-burning and glycogen sparing.\n2. **Race rehearsal** — practice pacing, fueling, mental rhythm at goal pace.\n\n**Pitfall:** don't turn every long run into an M run. One M session per week max during the specific phase.` },
   { id:'long-run-purpose', cat:'Long Run',
     kw:['why long run','purpose of long run','benefit of long run','why do long runs'],
     syn:['long','purpose'],
-    a:`The long run develops **aerobic and muscular endurance** you can't get from shorter sessions:\n\n1. **Mitochondrial density** — more energy factories\n2. **Capillary growth** — better oxygen delivery\n3. **Fat oxidation** — spares glycogen late in a race\n4. **Muscular durability** — legs tolerate more pounding\n5. **Mental confidence** — you *know* you can go the distance\n\n**Daniels' guideline:** build toward ~**2.5–3 hours for a marathon**, capped by weekly volume and safety.\n\n**Pace:** E pace. Always.` },
-
+    a:`The long run develops **aerobic and muscular endurance** you can't get from shorter sessions:\n\n1. **Mitochondrial density**\n2. **Capillary growth**\n3. **Fat oxidation** — spares glycogen late in a race\n4. **Muscular durability**\n5. **Mental confidence**\n\n**Daniels' guideline:** build toward ~**2.5–3 hours for a marathon**.\n\n**Pace:** E pace. Always.` },
   { id:'cutback-why', cat:'Recovery',
     kw:['what is cutback','why cutback','recovery week','absorption week','reduced week'],
     syn:['cutback','recovery'],
-    a:`**Cutback weeks** are planned recovery weeks where volume drops ~25–40% before resuming.\n\n**Why they work:** adaptation doesn't happen during training — it happens during **recovery**. A hard block creates stress; the cutback lets your body absorb it and emerge stronger.\n\n**Typical patterns:**\n- 3 weeks building → 1 cutback\n- 4 build → cutback → 4 build → cutback (plans ≥ 16 weeks)\n\n**Symptoms you're overdue:** resting HR creeping up, poor sleep, nagging aches, easy runs feeling hard.` },
-
+    a:`**Cutback weeks** are planned recovery weeks where volume drops ~25–40% before resuming.\n\n**Why they work:** adaptation doesn't happen during training — it happens during **recovery**.\n\n**Typical patterns:**\n- 3 weeks building → 1 cutback\n- 4 build → cutback → 4 build → cutback (plans ≥ 16 weeks)\n\n**Symptoms you're overdue:** resting HR creeping up, poor sleep, nagging aches, easy runs feeling hard.` },
   { id:'strides', cat:'Workouts',
     kw:['what are strides','why strides','strides benefit','20 second strides','what is a stride'],
     syn:['strides'],
-    a:`**Strides** are 15–20 second accelerations to roughly mile pace (R pace), followed by full recovery.\n\n**What they do:**\n- Sharpen neuromuscular coordination\n- Improve running economy\n- Remind your legs what "fast" feels like\n- Zero fatigue cost\n\n**How:** after an easy run, find a flat stretch. Accelerate over 20s to R pace, hold 2–3s, decelerate. Jog 60–90s. Repeat 6–10×.` },
-
+    a:`**Strides** are 15–20 second accelerations to roughly mile pace (R pace), followed by full recovery.\n\n**What they do:**\n- Sharpen neuromuscular coordination\n- Improve running economy\n- Remind your legs what "fast" feels like\n- Zero fatigue cost\n\n**How:** after an easy run, accelerate over 20s to R pace, hold 2–3s, decelerate. Jog 60–90s. Repeat 6–10×.` },
   { id:'taper-how', cat:'Taper',
     kw:['how to taper','taper marathon','taper weeks','race taper','how do i taper'],
     syn:['taper'],
-    a:`**Taper = reduce volume, keep intensity.** Arrive fresh but sharp — not flat.\n\n**2-week structure:**\n- **Week −2:** ~65–75% of peak volume; keep one short T session; long run cut to 60%\n- **Race week:** ~40–55% of peak; one 3 × 1 km T sharpener mid-week; all other runs short and easy\n\n**What NOT to do:**\n- Don't stop running. Frequency stays the same.\n- Don't add extra "sharpening" sessions.\n- Don't do a hard workout 2 days out.\n\n**Feel:** you should feel slightly *restless* by race day — not tired, not flat.` },
-
+    a:`**Taper = reduce volume, keep intensity.** Arrive fresh but sharp.\n\n**2-week structure:**\n- **Week −2:** ~65–75% of peak volume; one short T session; long run cut to 60%\n- **Race week:** ~40–55% of peak; one 3 × 1 km T sharpener mid-week\n\n**What NOT to do:**\n- Don't stop running.\n- Don't add extra sharpeners.\n- Don't do a hard workout 2 days out.\n\n**Feel:** slightly *restless* by race day.` },
   { id:'race-week', cat:'Race Day',
     kw:['race week','race week plan','week before race','race week training'],
     syn:['race week'],
-    a:`**Race week checklist:**\n\n- **Volume:** ~40–55% of peak. Most runs 4–6 km easy.\n- **Quality:** one sharpener, ~3 days out — 3 × 1 km T.\n- **Long run:** none. Replace with 40–50 min easy.\n- **Rest:** same days as always.\n- **Sleep:** prioritized.\n- **Fuel:** practice race-day breakfast 2–3 days before.\n\nRace-week *training mileage excludes race distance*. The plan header shows both separately.` },
-
+    a:`**Race week checklist:**\n\n- **Volume:** ~40–55% of peak.\n- **Quality:** one sharpener, ~3 days out — 3 × 1 km T.\n- **Long run:** none. Replace with 40–50 min easy.\n- **Rest:** same days as always.\n- **Fuel:** practice race-day breakfast 2–3 days before.` },
   { id:'how-many-days', cat:'General',
     kw:['how many days a week','days per week run','how often run','how many days should i run'],
     syn:['days','frequency'],
-    a:`Depends on goal and base:\n\n- **Health/fitness:** 3 days/week\n- **5K–10K:** 4–5 days\n- **Half marathon:** 5 days\n- **Marathon:** 5–6 days\n\n**More important than frequency:** consistency. 4 days/week for 6 months beats 6 days/week for 6 weeks.\n\n**If new:** start at 3, add 1 day every 6–8 weeks.` },
-
+    a:`Depends on goal and base:\n\n- **Health/fitness:** 3 days/week\n- **5K–10K:** 4–5 days\n- **Half marathon:** 5 days\n- **Marathon:** 5–6 days\n\n**More important than frequency:** consistency. 4 days/week for 6 months beats 6 days/week for 6 weeks.` },
   { id:'missed-workout', cat:'General',
     kw:['missed a workout','missed a run','skip workout','fell behind','what if i miss'],
     syn:['missed','skipped'],
-    a:`**Miss one easy run:** skip it. No makeup.\n**Miss one quality session:** don't stack it onto another day. Skip it.\n**Miss a week:** pick up where the plan says. Don't try to catch up.\n\n**Golden rule:** never compress a plan. Adding yesterday's workout on top of today's is how you get injured.\n\nMiss more than 2 weeks? Restart at ~80% of where you left off.` },
-
+    a:`**Miss one easy run:** skip it. No makeup.\n**Miss one quality session:** don't stack it onto another day. Skip it.\n**Miss a week:** pick up where the plan says.\n\n**Golden rule:** never compress a plan.\n\nMiss more than 2 weeks? Restart at ~80% of where you left off.` },
   { id:'soreness', cat:'General',
     kw:['sore after run','muscle soreness','doms','soreness normal','why am i sore'],
     syn:['sore','soreness'],
-    a:`**DOMS** peaks 24–72h after hard or unfamiliar work. Normal, especially early in a plan.\n\n**Normal:** symmetrical, diffuse, feels better as you warm up.\n**Not normal:** sharp, one-sided, worse as you run. Likely injury — see a physio.\n\n**What helps:** light movement, sleep, protein (~1.6 g/kg/day).\n**What doesn't:** ice baths, massage guns, most supplements.\n\n**Rule of thumb:** if soreness lasts >5 days after a workout, back off.` },
-
+    a:`**DOMS** peaks 24–72h after hard or unfamiliar work. Normal.\n\n**Normal:** symmetrical, diffuse, feels better as you warm up.\n**Not normal:** sharp, one-sided, worse as you run. Likely injury — see a physio.\n\n**What helps:** light movement, sleep, protein (~1.6 g/kg/day).\n**Rule of thumb:** if soreness lasts >5 days after a workout, back off.` },
   { id:'shin-splints', cat:'Injury',
     kw:['shin splints','shin pain','medial tibial','my shins hurt'],
     syn:['shin','splints'],
-    a:`**Shin splints (MTSS)** — pain along the inner tibia. Common in new runners or after a volume jump.\n\n**What to do:**\n- Stop running for 5–7 days\n- Cross-train (bike, pool) to maintain fitness\n\n**Root causes to fix:**\n- Too much too soon\n- Weak calves / hip abductors\n- Worn-out shoes\n\n**See a physio if:** pain persists at rest, is one-sided, or doesn't improve after a week off.` },
-
+    a:`**Shin splints (MTSS)** — pain along the inner tibia.\n\n**What to do:**\n- Stop running 5–7 days\n- Cross-train (bike, pool)\n\n**Root causes:**\n- Too much too soon\n- Weak calves / hip abductors\n- Worn-out shoes\n\n**See a physio if:** pain persists at rest, is one-sided, or doesn't improve after a week off.` },
   { id:'pfitzinger', cat:'Systems',
     kw:['pfitzinger','pfitz','advanced marathoning','pfitz plan'],
     syn:['pfitzinger'],
-    a:`**Pfitzinger & Douglas** (*Advanced Marathoning*) uses:\n\n- **Lactate threshold runs** (similar to Daniels T)\n- **Medium-long runs** mid-week (13–16 km)\n- **Long runs** up to 35 km with marathon-pace segments\n- **Tune-up races** as checkpoints\n\n**Key difference from Daniels:** more volume at moderate intensity, fewer very-hard sessions.\n\nPeak weekly km for advanced marathoners: 100–130 km.` },
-
+    a:`**Pfitzinger & Douglas** (*Advanced Marathoning*): more volume at moderate intensity, fewer very-hard sessions. Long runs up to 35 km with marathon-pace segments.\n\nPeak weekly km for advanced marathoners: 100–130 km.` },
   { id:'lydiard', cat:'Systems',
     kw:['lydiard','arthur lydiard','base building lydiard','lydiard method'],
     syn:['lydiard'],
-    a:`**Arthur Lydiard** pioneered **periodization**:\n\n1. **Base phase** — 8–12 weeks of pure aerobic running\n2. **Hill phase** — strength work\n3. **Track phase** — speed and sharpening\n4. **Peaking phase** — taper and race\n\n**Key idea:** build a massive aerobic base first, then add intensity. His athletes ran 100-mile weeks before touching intervals.\n\n**Modern relevance:** compress the base to 60–70% of a plan, not 90%. But the principle — aerobic first, speed later — remains.` },
-
+    a:`**Arthur Lydiard** pioneered **periodization**:\n\n1. **Base phase** — 8–12 weeks of pure aerobic running\n2. **Hill phase** — strength work\n3. **Track phase** — speed and sharpening\n4. **Peaking phase** — taper and race\n\n**Key idea:** build a massive aerobic base first, then add intensity.` },
   { id:'80-20', cat:'Systems',
     kw:['80 20 running','polarized training','easy hard split','80/20'],
     syn:['80/20','polarized'],
-    a:`**80/20 running** (Fitzgerald, Seiler): 80% of training time at low intensity, 20% at moderate-to-high.\n\n**Why it works:** the mechanisms for improving aerobic fitness respond best to high volume at low intensity. Too much "moderate" work (the grey zone) makes you tired without raising your ceiling.\n\n**Daniels' framework** is compatible: E pace = 80% of km. T/I/R = 20%.` },
-
+    a:`**80/20 running** (Fitzgerald, Seiler): 80% of training time at low intensity, 20% at moderate-to-high.\n\n**Why it works:** aerobic mechanisms respond best to high volume at low intensity. Too much "moderate" makes you tired without raising your ceiling.` },
   { id:'explain-plan', cat:'Tool',
     kw:['explain my plan','how does my plan work','walk me through my plan','what does my plan do'],
     syn:['explain plan','walkthrough'],
-    a:`Your plan is organized into **4 phases**:\n\n**Phase I — Base.** Easy runs + strides + light R work. Builds aerobic foundation.\n\n**Phase II — Early quality.** R + T sessions. Sharpens economy, builds lactate clearance.\n\n**Phase III — Race-specific.** I + T/M work. Raises VO₂max, adds race-specific endurance.\n\n**Phase IV — Taper.** Reduced volume, short sharpeners, race day.\n\nEvery 3–4 weeks there's a **cutback week** (~25% less volume).\n\nTry **"explain week 5"** to see what any specific week trains.` },
-
+    a:`Your plan is organized into **4 phases**:\n\n**Phase I — Base.** Easy runs + strides + light R work.\n**Phase II — Early quality.** R + T sessions.\n**Phase III — Race-specific.** I + T/M work.\n**Phase IV — Taper.** Reduced volume, sharpeners, race day.\n\nEvery 3–4 weeks there's a **cutback week** (~25% less volume).\n\nTry **"explain week 5"** to see what any specific week trains.` },
   { id:'how-generated', cat:'Tool',
     kw:['how is my plan generated','how does this tool work','what algorithm','how do you build a plan'],
     syn:['generated','algorithm'],
-    a:`The tool applies **Daniels' VDOT methodology**:\n\n1. Your recent race → VDOT score → all paces\n2. Goal race → target VDOT → feasibility check\n3. Weeks available → phase boundaries\n4. Current + peak km → weekly volume targets with cutbacks\n5. Long-run day + rest days → schedule grid\n6. Fitness gap → whether to include M work\n7. Time trial → recalibrates future paces\n\nEvery week is validated against hard rules. If something can't fit, you'll see a validation warning.` },
-
+    a:`The tool applies **Daniels' VDOT methodology**:\n\n1. Recent race → VDOT score → all paces\n2. Goal race → target VDOT → feasibility check\n3. Weeks available → phase boundaries\n4. Current + peak km → weekly volume targets with cutbacks\n5. Long-run day + rest days → schedule grid\n6. Fitness gap → whether to include M work\n7. Time trial → recalibrates future paces` },
   { id:'why-cutback', cat:'Tool',
     kw:['why is week x a cutback','why cutback here','why recovery week here'],
     syn:['why cutback'],
-    a:`Cutbacks are placed by the rule engine based on plan length:\n\n- **12–13 weeks:** 1 cutback at ~50% mark\n- **14–17 weeks:** 1 mid-block cutback at ~50%\n- **18+ weeks:** 2 cutbacks (~35% and ~72%)\n- **Never** on a TT week, sim week, or immediately before taper\n\nCutback reduces weekly km by ~25% and long run by ~30%.` },
-
+    a:`Cutbacks are placed by the rule engine based on plan length:\n\n- **12–13 weeks:** 1 cutback at ~50% mark\n- **14–17 weeks:** 1 mid-block cutback at ~50%\n- **18+ weeks:** 2 cutbacks (~35% and ~72%)\n- **Never** on a TT week, sim week, or immediately before taper` },
   { id:'what-is-tt', cat:'Tool',
     kw:['what is the time trial','why time trial','tt week','mid block tt'],
     syn:['time trial','tt'],
-    a:`The **time trial (TT)** is a mid-block fitness checkpoint. It:\n\n1. **Measures current fitness** — you run all-out and enter the result\n2. **Recalibrates the plan** — a new VDOT updates all future paces\n\n**Important:** the TT counts as your quality session for the week. Days after it are easy. This is deliberate — racing hard then stacking threshold work creates too much stress.` },
-
-  { id:'double-threshold', cat:'Advanced',
-    kw:['double threshold','two workouts a day','norwegian method'],
-    syn:['double threshold'],
-    a:`**Double-threshold training** (the "Norwegian method") runs two threshold sessions per day, 4–5 days/week. Requires:\n\n- Very high weekly volume (120+ km)\n- Precise lactate measurement\n- Expert supervision\n- Years of base\n\n**Not recommended** for recreational runners. Pre-Flight Coach uses classic Daniels periodization.` },
-
+    a:`The **time trial (TT)** is a mid-block fitness checkpoint. It:\n\n1. **Measures current fitness** — you run all-out and enter the result\n2. **Recalibrates the plan** — a new VDOT updates all future paces\n\n**Important:** the TT counts as your quality session for the week.` },
   { id:'hr-zones', cat:'Advanced',
     kw:['heart rate zones','hr training','max heart rate','zone 2'],
     syn:['heart rate','hr zones'],
-    a:`**Heart-rate zones vs. pace zones:**\n\n- **Pace zones** (Daniels) are set by VDOT from race results — objective, repeatable.\n- **HR zones** are influenced by heat, caffeine, sleep, stress.\n\n**Daniels uses pace, not HR**, because pace is what you race.\n\n**When HR helps:** hot days, illness, altitude. If your E pace feels way harder than usual at the same speed, check HR.\n\n**Zone 2 hype:** "Zone 2" ≈ Daniels E pace. Same idea, different labeling.` }
+    a:`**Pace zones** (Daniels) are set by VDOT from race results — objective, repeatable.\n**HR zones** are influenced by heat, caffeine, sleep, stress.\n\n**Daniels uses pace, not HR**, because pace is what you race.\n\n**Zone 2 hype:** "Zone 2" ≈ Daniels E pace. Same idea, different labeling.` }
 ];
 
 var JUJU_CHIPS = [
@@ -260,11 +235,6 @@ var JUJU_CHIPS = [
 ];
 
 /* ─────────── 5. State ─────────── */
-/* ═══════════════════════════════════════════════════════════
-   JUJU PROXY — Cloudflare Worker URL
-   Replace with your actual Worker URL from Cloudflare
-   ═══════════════════════════════════════════════════════════ */
-var JUJU_PROXY_URL = 'https://juju-proxy.ravikoruprolu82.workers.dev/';
 var jujuState = {
   open: false, mode: 'juju', apiKey: '', model: '',
   messages: [], lastTopic: null, guidedForm: null
@@ -280,7 +250,7 @@ function jujuLoadSettings(){
     var raw = localStorage.getItem('juju_settings');
     if (!raw) return;
     var s = JSON.parse(raw);
-    jujuState.mode = s.mode || 'offline';
+    jujuState.mode = s.mode || 'juju';
     jujuState.apiKey = s.apiKey || '';
     jujuState.model = s.model || '';
   } catch(e){}
@@ -481,10 +451,11 @@ function jujuCallLLM(userText, history){
     return Promise.reject(new Error('No API key set. Click ⚙ to add one.'));
   }
   var sysPrompt = jujuSystemPrompt();
-    var rec = (history || []).slice(-8).filter(function(m){
-      return m.role === 'user' || m.role === 'assistant';
-    });
-    var contentsJ = rec.map(function(m){
+  var recent = (history || []).slice(-8).filter(function(m){ return m.role==='user' || m.role==='assistant'; });
+
+  /* ── Juju proxy ── */
+  if (provider === 'juju'){
+    var contentsJ = recent.map(function(m){
       return { role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] };
     });
     contentsJ.push({ role: 'user', parts: [{ text: userText }] });
@@ -492,7 +463,7 @@ function jujuCallLLM(userText, history){
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: sysP }] },
+        systemInstruction: { parts: [{ text: sysPrompt }] },
         contents: contentsJ,
         generationConfig: { temperature: 0.6, maxOutputTokens: 800 }
       })
@@ -505,11 +476,8 @@ function jujuCallLLM(userText, history){
       throw new Error('Juju proxy: unexpected response shape');
     });
   }
-  var provider = jujuState.mode, key = jujuState.apiKey;
-  if (!key) return Promise.reject(new Error('No API key set. Click ⚙ to add one.'));
-  var sysPrompt = jujuSystemPrompt();
-  var recent = (history || []).slice(-8).filter(function(m){ return m.role==='user' || m.role==='assistant'; });
 
+  /* ── OpenAI ── */
   if (provider === 'openai'){
     var model = jujuState.model || 'gpt-4o-mini';
     var msgs = [{ role:'system', content: sysPrompt }].concat(recent).concat([{ role:'user', content: userText }]);
@@ -522,6 +490,8 @@ function jujuCallLLM(userText, history){
       return r.json();
     }).then(function(j){ return j.choices[0].message.content; });
   }
+
+  /* ── Anthropic ── */
   if (provider === 'anthropic'){
     var modelA = jujuState.model || 'claude-3-5-sonnet-latest';
     return fetch('https://api.anthropic.com/v1/messages', {
@@ -533,14 +503,16 @@ function jujuCallLLM(userText, history){
       return r.json();
     }).then(function(j){ return j.content[0].text; });
   }
+
+  /* ── Gemini (direct, needs key) ── */
   if (provider === 'gemini'){
     var modelG = jujuState.model || 'gemini-1.5-flash';
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modelG) + ':generateContent?key=' + encodeURIComponent(key);
-    var contents = recent.map(function(m){ return { role: m.role==='assistant'?'model':'user', parts:[{text:m.content}] }; });
-    contents.push({ role:'user', parts:[{ text:userText }] });
+    var contentsG = recent.map(function(m){ return { role: m.role==='assistant'?'model':'user', parts:[{text:m.content}] }; });
+    contentsG.push({ role:'user', parts:[{ text:userText }] });
     return fetch(url, {
       method:'POST', headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ systemInstruction:{ parts:[{text: sysPrompt}] }, contents: contents, generationConfig:{ temperature:0.6, maxOutputTokens:800 } })
+      body: JSON.stringify({ systemInstruction:{ parts:[{text: sysPrompt}] }, contents: contentsG, generationConfig:{ temperature:0.6, maxOutputTokens:800 } })
     }).then(function(r){
       if (!r.ok) return r.text().then(function(t){ throw new Error('Gemini: ' + r.status + ' — ' + t.slice(0,180)); });
       return r.json();
@@ -550,6 +522,7 @@ function jujuCallLLM(userText, history){
       throw new Error('Gemini: unexpected response shape');
     });
   }
+
   return Promise.reject(new Error('Unknown mode: ' + provider));
 }
 
@@ -656,7 +629,7 @@ function jujuSendMessage(){
         jujuAddMessage('bot', match.entry.a);
         jujuState.messages.push({ role:'assistant', content: match.entry.a });
       } else {
-        jujuAddMessage('bot', "I don't have a built-in answer for that one.\n\nTry asking about **VDOT**, **paces**, **long runs**, **cutbacks**, **taper**, or say **\"explain my plan\"** / **\"explain week 5\"**.\n\nOr connect a real LLM via ⚙ settings — then I can answer anything.");
+        jujuAddMessage('bot', "I don't have a built-in answer for that one.\n\nTry asking about **VDOT**, **paces**, **long runs**, **cutbacks**, **taper**, or say **\"explain my plan\"** / **\"explain week 5\"**.\n\nOr switch back to **Juju mode** in ⚙ to get a real AI answer.");
       }
     }, 300);
     return;
@@ -670,7 +643,7 @@ function jujuSendMessage(){
       if (!reply) reply = '(empty response)';
       jujuAddMessage('bot', reply);
       jujuState.messages.push({ role:'assistant', content: reply });
-      jujuSetStatus('Online · ' + jujuState.mode);
+      jujuSetStatus(jujuState.mode === 'juju' ? "Online · Juju's own brain 🐼" : 'Online · ' + jujuState.mode);
     })
     .catch(function(err){
       jujuHideTyping();
@@ -680,6 +653,24 @@ function jujuSendMessage(){
 }
 
 /* ─────────── 13. Init ─────────── */
+function jujuUpdateSettingsVisibility(){
+  var keyField = document.getElementById('jujuApiKey');
+  var modelField = document.getElementById('jujuModel');
+  var keyLabel = document.getElementById('jujuKeyLabel');
+  var modelLabel = document.getElementById('jujuModelLabel');
+  if (!keyField) return;
+  var hide = (jujuState.mode === 'juju');
+  keyField.style.display = hide ? 'none' : 'block';
+  modelField.style.display = hide ? 'none' : 'block';
+  if (keyLabel) keyLabel.style.display = hide ? 'none' : 'block';
+  if (modelLabel) modelLabel.style.display = hide ? 'none' : 'block';
+}
+function jujuStatusText(){
+  if (jujuState.mode === 'offline') return 'Offline · built-in knowledge';
+  if (jujuState.mode === 'juju') return "Online · Juju's own brain 🐼";
+  return 'Online · ' + jujuState.mode;
+}
+
 function jujuInit(){
   jujuLoadSettings();
   var fab = document.getElementById('jujuFab');
@@ -697,9 +688,8 @@ function jujuInit(){
   modeSel.value = jujuState.mode;
   keyInp.value = jujuState.apiKey;
   modelInp.value = jujuState.model;
-  jujuSetStatus(jujuState.mode === 'offline'
-    ? 'Offline · built-in knowledge'
-    : (jujuState.mode === 'juju' ? 'Online · Juju\'s own brain 🐼' : 'Online · ' + jujuState.mode));
+  jujuSetStatus(jujuStatusText());
+  jujuUpdateSettingsVisibility();
 
   fab.addEventListener('click', function(){
     jujuState.open = !jujuState.open;
@@ -715,18 +705,8 @@ function jujuInit(){
   settingsBtn.addEventListener('click', function(e){ e.stopPropagation(); settings.classList.toggle('open'); });
   modeSel.addEventListener('change', function(){
     jujuState.mode = modeSel.value; jujuSaveSettings();
-    jujuSetStatus(jujuState.mode === 'offline'
-      ? 'Offline · built-in knowledge'
-      : (jujuState.mode === 'juju' ? 'Online · Juju\'s own brain 🐼' : 'Online · ' + jujuState.mode));
-    var keyField = document.getElementById('jujuApiKey').parentElement;
-    var modelField = document.getElementById('jujuModel').parentElement;
-    if (jujuState.mode === 'juju'){
-      keyField.style.display = 'none';
-      modelField.style.display = 'none';
-    } else {
-      keyField.style.display = 'block';
-      modelField.style.display = 'block';
-    }
+    jujuSetStatus(jujuStatusText());
+    jujuUpdateSettingsVisibility();
   });
   keyInp.addEventListener('input', function(){ jujuState.apiKey = keyInp.value.trim(); jujuSaveSettings(); });
   modelInp.addEventListener('input', function(){ jujuState.model = modelInp.value.trim(); jujuSaveSettings(); });
