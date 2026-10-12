@@ -95,12 +95,9 @@ var JUJU_HTML = `
   <div class="juju-settings" id="jujuSettings">
     <label>AI Mode</label>
     <select id="jujuMode">
-      <option value="juju">Juju (no setup needed)</option>
+      <option value="juju">Juju (Kung fu Mode)</option>
       <option value="offline">Offline (built-in knowledge)</option>
-      <option value="openai">OpenAI (GPT)</option>
-      <option value="anthropic">Anthropic (Claude)</option>
-      <option value="gemini">Google Gemini</option>
-    </select>
+      </select>
     <label id="jujuKeyLabel">API Key</label>
     <input type="password" id="jujuApiKey" placeholder="paste your key" autocomplete="off">
     <label id="jujuModelLabel">Model (optional)</label>
