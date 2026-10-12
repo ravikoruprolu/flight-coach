@@ -640,7 +640,7 @@ function jujuSendMessage(){
       if (!reply) reply = '(empty response)';
       jujuAddMessage('bot', reply);
       jujuState.messages.push({ role:'assistant', content: reply });
-      jujuSetStatus(jujuState.mode === 'juju' ? "Online · Juju's own brain 🐼" : 'Online · ' + jujuState.mode);
+      jujuSetStatus(jujuState.mode === 'juju' ? "Online ·   🐼" : 'Online · ' + jujuState.mode);
     })
     .catch(function(err){
       jujuHideTyping();
@@ -664,7 +664,7 @@ function jujuUpdateSettingsVisibility(){
 }
 function jujuStatusText(){
   if (jujuState.mode === 'offline') return 'Offline · built-in knowledge';
-  if (jujuState.mode === 'juju') return "Online · Juju's own brain 🐼";
+  if (jujuState.mode === 'juju') return "Online ·   🐼";
   return 'Online · ' + jujuState.mode;
 }
 
