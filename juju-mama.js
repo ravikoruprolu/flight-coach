@@ -475,9 +475,12 @@ function jujuSystemPrompt(){
 }
 
 function jujuCallLLM(userText, history){
-     /* ── Juju proxy (no key needed — key hidden in Worker) ── */
-  if (provider === 'juju'){
-    var sysP = jujuSystemPrompt();
+  var provider = jujuState.mode, key = jujuState.apiKey;
+  /* Juju proxy doesn't need a key — key is hidden in the Worker */
+  if (provider !== 'juju' && !key) {
+    return Promise.reject(new Error('No API key set. Click ⚙ to add one.'));
+  }
+  var sysPrompt = jujuSystemPrompt();
     var rec = (history || []).slice(-8).filter(function(m){
       return m.role === 'user' || m.role === 'assistant';
     });
