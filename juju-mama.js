@@ -462,7 +462,7 @@ function jujuCallLLM(userText, history){
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: sysPrompt }] },
         contents: contentsJ,
-        generationConfig: { temperature: 0.6, maxOutputTokens: 800 }
+        generationConfig: { temperature: 0.6, maxOutputTokens: 4000 }
       })
     }).then(function(r){
       if (!r.ok) return r.text().then(function(t){ throw new Error('Juju proxy: ' + r.status + ' — ' + t.slice(0,180)); });
@@ -481,7 +481,7 @@ function jujuCallLLM(userText, history){
     return fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + key },
-      body: JSON.stringify({ model: model, messages: msgs, temperature:0.6, max_tokens:800 })
+      body: JSON.stringify({ model: model, messages: msgs, temperature:0.6, max_tokens:4000 })
     }).then(function(r){
       if (!r.ok) return r.text().then(function(t){ throw new Error('OpenAI: ' + r.status + ' — ' + t.slice(0,180)); });
       return r.json();
@@ -509,7 +509,7 @@ function jujuCallLLM(userText, history){
     contentsG.push({ role:'user', parts:[{ text:userText }] });
     return fetch(url, {
       method:'POST', headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ systemInstruction:{ parts:[{text: sysPrompt}] }, contents: contentsG, generationConfig:{ temperature:0.6, maxOutputTokens:800 } })
+      body: JSON.stringify({ systemInstruction:{ parts:[{text: sysPrompt}] }, contents: contentsG, generationConfig:{ temperature:0.6, maxOutputTokens:4000 } })
     }).then(function(r){
       if (!r.ok) return r.text().then(function(t){ throw new Error('Gemini: ' + r.status + ' — ' + t.slice(0,180)); });
       return r.json();
