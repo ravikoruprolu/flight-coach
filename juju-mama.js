@@ -92,6 +92,7 @@ var JUJU_HTML = `
   <div class="juju-settings" id="jujuSettings">
     <label>AI Mode</label>
     <select id="jujuMode">
+       <option value="juju">Juju (no setup needed)</option>
       <option value="offline">Offline (built-in knowledge)</option>
       <option value="openai">OpenAI (GPT)</option>
       <option value="anthropic">Anthropic (Claude)</option>
@@ -259,8 +260,13 @@ var JUJU_CHIPS = [
 ];
 
 /* ─────────── 5. State ─────────── */
+/* ═══════════════════════════════════════════════════════════
+   JUJU PROXY — Cloudflare Worker URL
+   Replace with your actual Worker URL from Cloudflare
+   ═══════════════════════════════════════════════════════════ */
+var JUJU_PROXY_URL = 'https://juju-proxy.ravikoruprolu82.workers.dev/';
 var jujuState = {
-  open: false, mode: 'offline', apiKey: '', model: '',
+  open: false, mode: 'juju', apiKey: '', model: '',
   messages: [], lastTopic: null, guidedForm: null
 };
 
@@ -469,6 +475,33 @@ function jujuSystemPrompt(){
 }
 
 function jujuCallLLM(userText, history){
+     /* ── Juju proxy (no key needed — key hidden in Worker) ── */
+  if (provider === 'juju'){
+    var sysP = jujuSystemPrompt();
+    var rec = (history || []).slice(-8).filter(function(m){
+      return m.role === 'user' || m.role === 'assistant';
+    });
+    var contentsJ = rec.map(function(m){
+      return { role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] };
+    });
+    contentsJ.push({ role: 'user', parts: [{ text: userText }] });
+    return fetch(JUJU_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: sysP }] },
+        contents: contentsJ,
+        generationConfig: { temperature: 0.6, maxOutputTokens: 800 }
+      })
+    }).then(function(r){
+      if (!r.ok) return r.text().then(function(t){ throw new Error('Juju proxy: ' + r.status + ' — ' + t.slice(0,180)); });
+      return r.json();
+    }).then(function(j){
+      var c = j.candidates && j.candidates[0];
+      if (c && c.content && c.content.parts && c.content.parts[0]) return c.content.parts[0].text;
+      throw new Error('Juju proxy: unexpected response shape');
+    });
+  }
   var provider = jujuState.mode, key = jujuState.apiKey;
   if (!key) return Promise.reject(new Error('No API key set. Click ⚙ to add one.'));
   var sysPrompt = jujuSystemPrompt();
@@ -661,7 +694,9 @@ function jujuInit(){
   modeSel.value = jujuState.mode;
   keyInp.value = jujuState.apiKey;
   modelInp.value = jujuState.model;
-  jujuSetStatus(jujuState.mode === 'offline' ? 'Offline · built-in knowledge' : 'Online · ' + jujuState.mode);
+  jujuSetStatus(jujuState.mode === 'offline'
+    ? 'Offline · built-in knowledge'
+    : (jujuState.mode === 'juju' ? 'Online · Juju\'s own brain 🐼' : 'Online · ' + jujuState.mode));
 
   fab.addEventListener('click', function(){
     jujuState.open = !jujuState.open;
@@ -677,7 +712,18 @@ function jujuInit(){
   settingsBtn.addEventListener('click', function(e){ e.stopPropagation(); settings.classList.toggle('open'); });
   modeSel.addEventListener('change', function(){
     jujuState.mode = modeSel.value; jujuSaveSettings();
-    jujuSetStatus(jujuState.mode === 'offline' ? 'Offline · built-in knowledge' : 'Online · ' + jujuState.mode);
+    jujuSetStatus(jujuState.mode === 'offline'
+      ? 'Offline · built-in knowledge'
+      : (jujuState.mode === 'juju' ? 'Online · Juju\'s own brain 🐼' : 'Online · ' + jujuState.mode));
+    var keyField = document.getElementById('jujuApiKey').parentElement;
+    var modelField = document.getElementById('jujuModel').parentElement;
+    if (jujuState.mode === 'juju'){
+      keyField.style.display = 'none';
+      modelField.style.display = 'none';
+    } else {
+      keyField.style.display = 'block';
+      modelField.style.display = 'block';
+    }
   });
   keyInp.addEventListener('input', function(){ jujuState.apiKey = keyInp.value.trim(); jujuSaveSettings(); });
   modelInp.addEventListener('input', function(){ jujuState.model = modelInp.value.trim(); jujuSaveSettings(); });
