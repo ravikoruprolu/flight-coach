@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pre-Flight Coach v24 — Team RAYS Initiative </title>
+<title>Pre-Flight Coach v25 — Training Logic & Plan Validation</title>
 <style>
   :root{
     --bg:#f5f5f7;--surface:#fff;--border:#e2e2e8;--text:#16161c;--muted:#6b6b78;
@@ -245,6 +245,10 @@
     .print-info-item .pi-label{font-size:6.5pt;margin-bottom:0.3mm}
     .print-info-item .pi-value{font-size:8.5pt}
     .print-info-item .pi-value.big{font-size:11pt}
+    .plan-goal-note{padding:1.5mm 2mm;margin:1.5mm 0 2mm;border-width:.5pt;gap:1mm;page-break-inside:avoid}
+    .plan-goal-note .title{font-size:8pt;margin-bottom:.5mm}
+    .plan-goal-note .label{font-size:6pt;margin-bottom:.3mm}
+    .plan-goal-note .desc{font-size:6.5pt;line-height:1.25}
     #plan > .card:first-child h2:last-of-type{font-size:8pt;margin-top:2mm;margin-bottom:1mm}
     #plan > .card:first-child > .pace-row{display:inline-block;width:19%;vertical-align:top;border-bottom:none;padding:0.5mm 0;grid-template-columns:auto 1fr;gap:2mm}
     #plan > .card:first-child > .pace-row .zone-badge{min-width:14px;font-size:7pt;padding:0.5px 3px;border-radius:2px}
@@ -282,8 +286,8 @@
 
 <header class="header no-print">
   <h1>Pre-Flight Coach</h1>
-  <span class="version-pill" id="headerVersion">v24</span>
-  <span class="sub">Team RAYS Initiative </span>
+  <span class="version-pill" id="headerVersion">v25</span>
+  <span class="sub">Daniels' Formula · Adaptive Training Plan</span>
   <span class="spacer"></span>
   <button class="btn" id="printBtn">🖨 Print / Save PDF</button>
 </header>
@@ -589,7 +593,7 @@
     <div class="fb-desc">Found a bug, an odd workout, or just want to share how the plan went? Send a note — this is a work in progress and every bit of feedback helps.</div>
     <div class="fb-email" id="feedbackEmail">ravikorurolu82@gmail.com</div>
     <div class="fb-actions">
-      <a class="fb-btn" id="feedbackLink" href="mailto:ravikorurolu82@gmail.com?subject=Pre-Flight%20Coach%20v22%20Feedback">✉ Open in email app</a>
+      <a class="fb-btn" id="feedbackLink" href="mailto:ravikorurolu82@gmail.com?subject=Pre-Flight%20Coach%20v25%20Feedback">✉ Open in email app</a>
       <button class="fb-btn ghost" id="copyEmailBtn" type="button">📋 Copy email address</button>
     </div>
   </div>
@@ -599,7 +603,7 @@
 <div class="copy-toast" id="copyToast">Email address copied</div>
 
 <script>
-var APP_VERSION = 'v24';
+var APP_VERSION = 'v25';
 
 function parseLocalDate(str){
   if (!str) return null;
@@ -853,7 +857,12 @@ function minAdequateVolume(goalDist,targetVdot){
   else vdotFactor=2.0;
   return 45*distFactor*vdotFactor;
 }
-function minLongRunFrac(goalDist){return {'5000':0.85,'10000':0.85,'21097.5':0.9,'42195':0.95}[String(goalDist)]||0.9;}
+function targetLongDurationMin(goalDist){
+  // Training-time targets, not a fraction of goal race duration. The final
+  // target is still bounded by current weekly volume and the plan's long-run cap.
+  var targets={'5000':55,'10000':75,'21097.5':105,'42195':165};
+  return targets[String(goalDist)] || 75;
+}
 function realisticGain(weeklyKm,adequateVol,weeks){
   var base=1.6;
   if(weeklyKm<adequateVol)base*=Math.max(0.35,weeklyKm/adequateVol);
@@ -869,8 +878,7 @@ function analyze(cfg){
   var vdotGap=targetVdot-curVdot;
   var adequateVol=minAdequateVolume(cfg.goalDist,targetVdot);
   var volOk=(cfg.peakKm>=adequateVol*0.95);
-  var raceDurationMin=cfg.goalTime/60;
-  var rawTargetLongMin=raceDurationMin*minLongRunFrac(cfg.goalDist);
+  var rawTargetLongMin=targetLongDurationMin(cfg.goalDist);
   var curPaces = paceFromVdot(curVdot);
   var avgEPaceSec = (curPaces.E_slow + curPaces.E_fast) / 2;
   var isMar = isMarathonDistance(cfg.goalDist);
@@ -914,6 +922,7 @@ function suggestPeakTiers(goalDist,currentKm){
   return list.map(function(t){return {name:t.name,km:Math.max(t.km,currentKm),note:t.note};});
 }
 var DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var DAY_FULL_NAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 function computeCaps(peakKm,goalDist){
   var isMar = isMarathonDistance(goalDist);
   var lMaxKm = isMar ? 35 : 30;
@@ -960,12 +969,17 @@ function lRunKm(caps, weekVol, capMin, paces, goalDist){
   var weeklyFrac = isMar ? (weekVol >= 70 ? 0.46 : weekVol >= 60 ? 0.44 : 0.40) : 0.32;
   var weeklyCap = weekVol * weeklyFrac;
   var km = Math.min(caps.L, kmFromTime, weeklyCap);
-  var actualKm = Math.max(8, Math.round(km));
+  var actualKm = Math.max(4, Math.round(km * 2) / 2);
   return { zone:'E', title:'Long run '+actualKm+' km', totalKm: actualKm, detail:'Easy / conversational', isQ: false, isLongRun: true };
 }
 function restDay(){return {zone:'rest',title:'Rest',totalKm:0,detail:'',isQ:false};}
 function raceDay(label){return {zone:'race',title:label,totalKm:0,detail:'Race day',isQ:false};}
-function ttDay(distLabel,distM){return {zone:'tt',title:distLabel+' Time Trial',totalKm:distM/1000+3,detail:'Hard, even pace',isQ:true};}
+function ttDay(distLabel,distM){
+  var testKm=distM/1000;
+  var totalKm=Math.round((testKm+3)*10)/10;
+  return {zone:'tt',title:distLabel+' time trial',totalKm:totalKm,testDistanceKm:testKm,
+    detail:distLabel+' test at hard, even effort; total session distance includes warm-up and cool-down',isQ:true};
+}
 function racePaceSimLong(peakKm, goalDist, variant){
   var isMar = isMarathonDistance(goalDist);
   var v = (variant || 0) % 2;
@@ -1067,11 +1081,37 @@ function enforceWeeklyMileageCap(week, peakKm, isRaceWeek, currentWeekCap){
     var take=Math.min(old-floor, total-cap);
     if(take>0){d.totalKm=Math.max(floor,Math.round((old-take)*10)/10); d.title=d.totalKm+' km E'+(d.strides?' + '+d.strides+' strides':''); reductions.push({day:x.i,from:old,to:d.totalKm,reason:'easy-volume'});}
   });
-  // If needed, shorten optional recovery/easy mileage further, never silently delete quality.
+  // If still over target, remove optional easy days before compromising the long run.
+  total=refreshWeekTotals(week);
+  if(total>cap+0.01){
+    var removable=week.days.map(function(d,i){return {d:d,i:i};}).filter(function(x){return x.d && x.d.zone==='E' && !x.d.isLongRun && !x.d.isQ && x.d.totalKm>0;});
+    removable.sort(function(a,b){return (b.d.totalKm||0)-(a.d.totalKm||0);});
+    removable.forEach(function(x){
+      total=refreshWeekTotals(week); if(total<=cap+0.01) return;
+      var old=x.d.totalKm||0;
+      x.d.zone='rest'; x.d.title='Rest (weekly volume adjustment)'; x.d.totalKm=0; x.d.strides=0;
+      x.d.detail='Optional easy mileage removed to respect the weekly volume target';
+      reductions.push({day:x.i,from:old,to:0,reason:'optional-easy-day-removed'});
+    });
+  }
+  // Preserve the workout itself; only trim up to 1 km of warm-up/cool-down when necessary.
+  total=refreshWeekTotals(week);
+  if(total>cap+0.01){
+    var quality=week.days.map(function(d,i){return {d:d,i:i};}).filter(function(x){return x.d && x.d.isQ && !x.d.isLongRun && (x.d.totalKm||0)>0;});
+    quality.sort(function(a,b){return (b.d.totalKm||0)-(a.d.totalKm||0);});
+    quality.forEach(function(x){
+      total=refreshWeekTotals(week); if(total<=cap+0.01) return;
+      var d=x.d, old=d.totalKm||0;
+      var floor=d.zone==='tt' && d.testDistanceKm ? d.testDistanceKm+2 : Math.max(3,old-1);
+      var take=Math.min(Math.max(0,old-floor),total-cap);
+      if(take>0.01){d.totalKm=Math.max(floor,Math.round((old-take)*10)/10);reductions.push({day:x.i,from:old,to:d.totalKm,reason:'quality-warmup-cooldown'});}
+    });
+  }
+  // The long run is the last thing shortened, and never below 4 km.
   total=refreshWeekTotals(week);
   if(total>cap+0.01){
     var long=week.days.find(function(d){return d && d.isLongRun;});
-    if(long){var oldLong=long.totalKm||0;var newLong=Math.max(8,Math.round((oldLong-(total-cap))*10)/10);if(newLong<oldLong){long.totalKm=newLong;long.title='Long run '+newLong+' km';reductions.push({from:oldLong,to:newLong,reason:'long-run-emergency-cap'});}}
+    if(long){var oldLong=long.totalKm||0;var newLong=Math.max(4,Math.round((oldLong-(total-cap))*10)/10);if(newLong<oldLong){long.totalKm=newLong;long.title='Long run '+newLong+' km';reductions.push({from:oldLong,to:newLong,reason:'long-run-emergency-cap'});}}
   }
   total=refreshWeekTotals(week);
   return {passed:total<=cap+0.01,before:Math.round((week._preCapKm||total)*10)/10,after:total,cap:cap,reductions:reductions};
@@ -1084,6 +1124,7 @@ function validateTrainingPlan(plan, cfg){
     if(w.totalKm>peak+0.01) issues.push({ruleId:'LOAD_MAX_WEEKLY_KM',severity:'error',week:w.number,observed:w.totalKm,expected:'<= '+peak});
     if(w.capResult && !w.capResult.passed) issues.push({ruleId:'LOAD_CAP_UNRESOLVED',severity:'error',week:w.number,observed:w.totalKm,expected:'<= '+(w.capResult.cap||peak)});
     if(w.isCutback && w.number!==plan.weeks.length && w.number!==plan.bounds.phaseIVStart && w.totalKm>peak*0.9) issues.push({ruleId:'LOAD_CUTBACK_MAGNITUDE',severity:'warning',week:w.number,observed:w.totalKm,expected:'meaningful reduction from adjacent build weeks'});
+    if((w.isCutback || w.isModReduced) && w.number>1){var previousWeek=plan.weeks[w.number-2];if(previousWeek && previousWeek.totalKm>0 && w.totalKm>=previousWeek.totalKm*0.9) issues.push({ruleId:'RECOVERY_WEEK_NOT_REDUCED',severity:'warning',week:w.number,observed:w.totalKm,expected:'at least 10% below previous week actual training volume'});}
     if(w.isCutback){
       var cutbackLong=(w.days||[]).find(function(d){return d && d.isLongRun;});
       if(cutbackLong && cutbackLong.isSim) issues.push({ruleId:'RECOVERY_NO_RACE_REHEARSAL',severity:'error',week:w.number,observed:cutbackLong.title,expected:'easy long run only in recovery week'});
@@ -1115,8 +1156,7 @@ function generatePlan(cfg){
   var goalDist=cfg.goalDist,goalTime=cfg.goalTime;
   var caps=computeCaps(peakKm,goalDist);
   var paces=paceFromVdot(paceVdot);
-  var raceDurationMin=goalTime/60;
-  var rawTargetLongMin=raceDurationMin*minLongRunFrac(goalDist);
+  var rawTargetLongMin=targetLongDurationMin(goalDist);
   var targetLongMin = Math.min(rawTargetLongMin, caps.Lmin);
   var goalPaceSecPerKm=goalTime/(goalDist/1000);
   var currentMPaceSecPerKm=paces.M;
@@ -1175,7 +1215,8 @@ function generatePlan(cfg){
     else {weekVol=Math.round(peakKm*0.45);}
     var isEarlyAbsorption = (weeks >= 12 && w === 4 && w < bounds.phaseIVStart && w !== ttWeek && simWeeks.indexOf(w) < 0);
     var isCutback = isEarlyAbsorption || (midBlockCutbackWeek !== null && w === midBlockCutbackWeek);
-    var isModReduced = (!isCutback && w>2 && w < bounds.phaseIVStart && w%4===0);
+    var previousWasRecovery = out.length > 0 && (out[out.length-1].isCutback || out[out.length-1].isModReduced);
+    var isModReduced = (!isCutback && !previousWasRecovery && w>2 && w < bounds.phaseIVStart && w%4===0);
     if(isModReduced){ weekVol=Math.round(weekVol*0.85); }
     if (isCutback){ weekVol = Math.round(weekVol * 0.72); }
 
@@ -1186,8 +1227,7 @@ function generatePlan(cfg){
     var longProgress=Math.min(1, w / longBuildEnd);
     var thisLongTarget;
     if (isMar){ thisLongTarget = targetLongMin * (0.55 + 0.50 * longProgress); }
-    else { thisLongTarget = targetLongMin * (0.55 + 0.45 * longProgress); }
-    if(isCutback) thisLongTarget *= 0.90;
+    else { thisLongTarget = targetLongMin * (0.65 + 0.35 * longProgress); }
     if(isTTWeek) thisLongTarget *= 0.90;
     if(isTaperWeek) thisLongTarget *= 0.72;
     if(isMar && w >= bounds.phaseIVStart - 4 && w < bounds.phaseIVStart - 1 && simWeeks.indexOf(w) < 0 && !isCutback){
@@ -1215,7 +1255,8 @@ function generatePlan(cfg){
       }
     } else if(isTaperWeek){
       if(longDayIdx>=0){
-        var taperLongMin = Math.min(targetLongMin * 0.45, 14 * 60 * 60 / ((paces.E_slow + paces.E_fast)/2));
+        var taperLongFraction = isMar ? 0.45 : 0.65;
+          var taperLongMin = Math.min(targetLongMin * taperLongFraction, 14 * 60 * 60 / ((paces.E_slow + paces.E_fast)/2));
         days[longDayIdx]=lRunKm(caps,weekVol,taperLongMin,paces,goalDist);
       }
       for(var i=0;i<weekLen;i++){
@@ -1283,19 +1324,28 @@ function generatePlan(cfg){
         if(isRest(i)){days[i]=restDay();continue;}
         days[i]=eRunKm(Math.max(4,Math.round(weekVol*0.14)),i%2===0?6:0);
       }
-      if (isCutback){
+      if (isCutback || isModReduced){
         if (longDayIdx >= 0 && days[longDayIdx] && days[longDayIdx].isLongRun){
-          // Recovery weeks must reduce the long run meaningfully; rehearsals are suppressed above.
-          var newLong = Math.max(8, Math.round(days[longDayIdx].totalKm * 0.75));
+          // A reduced week must not increase the long run; the lower weekly cap already reduces load.
+          var newLong = Math.max(4, Math.round(days[longDayIdx].totalKm * 2) / 2);
+          var previousWeekForLong = out.length ? out[out.length-1] : null;
+          var previousLongForCutback = previousWeekForLong && (previousWeekForLong.days||[]).find(function(d){return d && d.isLongRun;});
+          if(previousLongForCutback && previousLongForCutback.totalKm >= 5){
+            var priorLongFactor = isCutback ? 0.80 : 0.90;
+            var priorLongCeiling = Math.floor(previousLongForCutback.totalKm * priorLongFactor * 2) / 2;
+            newLong = Math.max(4, Math.min(newLong, priorLongCeiling));
+          }
           days[longDayIdx].totalKm = newLong;
           days[longDayIdx].title = 'Long run ' + newLong + ' km';
         }
-        for (var i=0;i<weekLen;i++){
-          if (days[i] && days[i].zone === 'E' && !days[i].isLongRun){
-            var reduced = Math.round(days[i].totalKm * 0.90);
-            if (reduced < days[i].totalKm && reduced >= 4){
-              days[i].totalKm = reduced;
-              days[i].title = days[i].totalKm + ' km E' + (days[i].strides ? ' + '+days[i].strides+' strides' : '');
+        if(isCutback){
+          for (var i=0;i<weekLen;i++){
+            if (days[i] && days[i].zone === 'E' && !days[i].isLongRun){
+              var reduced = Math.round(days[i].totalKm * 0.90);
+              if (reduced < days[i].totalKm && reduced >= 4){
+                days[i].totalKm = reduced;
+                days[i].title = days[i].totalKm + ' km E' + (days[i].strides ? ' + '+days[i].strides+' strides' : '');
+              }
             }
           }
         }
@@ -1306,8 +1356,17 @@ function generatePlan(cfg){
     // Store training distance separately from race distance; enforce peak cap after all session builders/padding.
     var preCapKm=0; for(var pc=0;pc<days.length;pc++){if(days[pc] && days[pc].zone!=='race' && isFinite(days[pc].totalKm)) preCapKm+=days[pc].totalKm;}
     var weekRecord={number:w,days:days,totalKm:preCapKm}; weekRecord._preCapKm=preCapKm;
-    var weekCap=peakKm;
-    if(w===1) weekCap=Math.min(peakKm,Math.max(currentKm,Math.round(currentKm*1.10)));
+    // Enforce the intended weekly target. The previous version only capped at
+    // peakKm, allowing a 'Reduced' week to exceed its planned weekVol.
+    var weekCap=Math.min(peakKm,weekVol);
+    if(w===1) weekCap=Math.min(weekCap,Math.max(currentKm,Math.round(currentKm*1.10)));
+    if(w>1 && (isCutback || isModReduced) && out.length){
+      var previousActual=out[out.length-1].totalKm || 0;
+      if(previousActual>0){
+        var reductionFactor=isCutback?0.85:0.90;
+        weekCap=Math.min(weekCap,Math.round(previousActual*reductionFactor*10)/10);
+      }
+    }
     var capResult=enforceWeeklyMileageCap(weekRecord,peakKm,isRaceWeek,weekCap);
     var qCount=0;
     for(var i=0;i<7;i++){if(days[i]&&days[i].isQ){qCount++;days[i].qRank='Q'+qCount;}}
@@ -1479,7 +1538,7 @@ function inlinePace(day, paces, isBeginner){
   if(z==='T') return paceKm(paces.T);
   if(z==='I') return paceKm(paces.I);
   if(z==='R') return paceKm(paces.R);
-  if(z==='tt') return 'all out';
+  if(z==='tt') return 'test effort';
   return '';
 }
 function escapeHtml(s){if(s===null||s===undefined)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -1512,7 +1571,7 @@ function renderVerdict(a,userName,cfg){
   var icon={green:'✓',amber:'⚠',red:'⚠'};
   var intro;
   if (a.severity === 'red') {
-    intro = safeName+', with '+a.weeks+' weeks and '+a.peakKm+' km/week, your realistic finish is closer to <strong>'+fmtTime(a.predictedTime)+'</strong>. The goal of '+fmtTime(a.goalTime)+' would require a <strong>+'+a.vdotGap.toFixed(1)+'-VDOT jump</strong> — far more than the ~'+a.achievableGain.toFixed(1)+' points your current training can deliver. <strong>You decide.</strong> We\'ll build the plan for the race date anyway, but expect a revised target.';
+    intro = safeName+', the current model estimates a finish around <strong>'+fmtTime(a.predictedTime)+'</strong> from your current fitness, available weeks and planned volume. This is a simplified planning estimate, not a guarantee. The goal of '+fmtTime(a.goalTime)+' requires a <strong>+'+a.vdotGap.toFixed(1)+'-VDOT jump</strong>, compared with an estimated training gain of about '+a.achievableGain.toFixed(1)+' points. <strong>You decide.</strong> We\'ll build for your race date and reassess at the time trial.';
   } else if (a.severity === 'amber') {
     intro = safeName+', this is an <strong>ambitious</strong> goal for the time and volume you have. We build the plan for the race date anyway. At Week '+(a.ttWeekText||'the midpoint')+' you\'ll run a time trial — if your fitness then supports this goal, we continue as planned. If not, we\'ll suggest a revised goal. <strong>You decide.</strong>';
   } else {
@@ -1526,7 +1585,7 @@ function renderVerdict(a,userName,cfg){
   else if (a.vdotGap < 0.5) { goalDisplay = 'At current level'; goalDetail = 'Goal matches current ability'; goalStatus = 'pass'; }
   else { goalDisplay = '+'+a.vdotGap.toFixed(1)+' VDOT'; goalDetail = 'Requires '+a.targetVdot.toFixed(1)+' at race day'; goalStatus = a.vdotFeasible?'pass':(a.severity==='amber'?'warn':'fail'); }
   html+=checkItem('Goal',goalDisplay,goalDetail,goalStatus);
-  html+=checkItem('Predicted at race',fmtTime(a.predictedTime),'If training goes well with current inputs',(a.vdotGap<=1?'pass':(a.severity==='amber'?'warn':'fail')));
+  html+=checkItem('Modelled at race',fmtTime(a.predictedTime),'Simplified planning estimate, not a guarantee',(a.vdotGap<=1?'pass':(a.severity==='amber'?'warn':'fail')));
   html+=checkItem('Calculated peak',a.peakKm+' km/week',a.volOk?'Derived from current load, goal and available weeks':'Calculated build remains below the typical volume estimate',a.volOk?'pass':'warn');
   html+=checkItem('Peak long run','~'+Math.round(a.targetLongMin)+' min target',a.planCanReachLongRun?'Plan builds to this duration':'Long-run duration is constrained by current load and available build time',a.planCanReachLongRun?'pass':'warn');
   if (a.noVolumeGrowth){
@@ -1662,13 +1721,16 @@ function renderPlan(result,meta,userName){
   }
   html+='<div class="print-info-item"><div class="pi-label">Long run day</div><div class="pi-value">'+meta.longRunDay+'</div></div>';
   html+='</div></div>';
+  if(!isBeginner && meta.goalOutlookTitle && meta.goalOutlookDetail){
+    html+='<div class="verdict-banner '+escapeHtml(meta.goalSeverity||'amber')+' plan-goal-note"><div class="body"><div class="label">Goal outlook</div><div class="title">'+escapeHtml(meta.goalOutlookTitle)+'</div><div class="desc">'+escapeHtml(meta.goalOutlookDetail)+'</div></div></div>';
+  }
   if (isBeginner) html+=renderBeginnerLegend();
   else html+=renderPaceSummary(paces);
   html+='</div>';
   if (!isBeginner && result.ttWeek){
     html+='<div class="recal-panel no-print" id="recalPanel">';
     html+='<h3>Mid-block time trial — Week '+result.ttWeek+'</h3>';
-    html+='<p>Week '+result.ttWeek+' includes a <strong>'+result.ttDistanceLabel+' time trial</strong>. Run it hard and even. Enter the result below and we\'ll re-check your fitness.</p>';
+    html+='<p>Week '+result.ttWeek+' includes a <strong>'+result.ttDistanceLabel+' time trial</strong>. Warm up, run the test distance hard and evenly, then cool down. The distance shown on the workout card includes warm-up and cool-down. Enter only the test result below and we\'ll re-check your fitness.</p>';
     html+='<div class="recal-row">';
     html+='<div class="field"><label>Distance</label><select id="ttDistance">'+ttSelectOptions(result.ttDistance)+'</select></div>';
     html+='<div class="field"><label>Time</label><div class="time-input"><input type="tel" id="ttTimeH" maxlength="2" placeholder="00" inputmode="numeric"><span class="sep">:</span><input type="tel" id="ttTimeM" maxlength="2" placeholder="00" inputmode="numeric"><span class="sep">:</span><input type="tel" id="ttTimeS" maxlength="2" placeholder="00" inputmode="numeric"></div></div>';
@@ -1891,7 +1953,10 @@ function runStandardAnalysis(){
     currentVdot:a.currentVdot, targetVdot:a.targetVdot,
     currentAbilityStr:fmtTime(findRaceTime(a.currentVdot,cfg.goalDist)),
     raceDateStr:fmtDateLong(raceDateObj), firstDayStr:fmtDateLong(startDateObj),
-    peakKm:cfg.peakKm, longRunDay:DAY_NAMES[cfg.longDay]+'s'
+    peakKm:cfg.peakKm, longRunDay:DAY_FULL_NAMES[cfg.longDay],
+    goalSeverity:a.severity,
+    goalOutlookTitle:({green:'Goal compatible with current fitness estimate',amber:'Ambitious goal — reassess at the time trial',red:'Stretch goal — current fitness is far from target'})[a.severity],
+    goalOutlookDetail:(a.goalIsEasier ? 'Current-fitness estimate: '+fmtTime(a.currentGoalTime)+'. Goal: '+fmtTime(cfg.goalTime)+'. The target is easier than the current estimate; keep the goal if you prefer a conservative race.' : 'Current-fitness estimate: '+fmtTime(a.currentGoalTime)+'. Goal: '+fmtTime(cfg.goalTime)+'. Target gap: '+(a.vdotGap>=0?'+':'')+a.vdotGap.toFixed(1)+' VDOT; modelled training gain: about '+a.achievableGain.toFixed(1)+' points. The race-time forecast is a heuristic, not a guarantee. Reassess after the Week '+(state.plan.ttWeek||'mid-plan')+' time trial.')
   };
   document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
   if (state.plan.ttWeek){
@@ -1922,7 +1987,7 @@ function runBeginnerAnalysis(){
     goalTimeStr: '', subtitle: 'Build from walking and run/walk intervals to continuous running · '+weeks+' weeks',
     startingLevel: cfg.abilityLabel, daysPerWeek: cfg.daysPerWeek,
     raceDateStr: fmtDateLong(raceDateObj), firstDayStr: fmtDateLong(startDateObj),
-    longRunDay: DAY_NAMES[cfg.longDay]+'s', peakKm: 0
+    longRunDay: DAY_FULL_NAMES[cfg.longDay], peakKm: 0
   };
   document.getElementById('plan').innerHTML = renderPlan(planResult, state.planMeta, state.userName);
   updateFeelNote();
@@ -1962,6 +2027,13 @@ function handleRecalibrate(){
   var projectedAtRace=newVdot+Math.max(0,extraGain*0.5);
   var projectedTime=findRaceTime(projectedAtRace,cfg.goalDist);
   state.planMeta.targetVdot=newVdot;
+  state.planMeta.currentVdot=newVdot;
+  state.planMeta.currentAbilityStr=fmtTime(findRaceTime(newVdot,cfg.goalDist));
+  var recalGoalVdot=Vdot.fromRace(cfg.goalDist,state.adjustedGoalTime);
+  var recalGap=recalGoalVdot-newVdot;
+  state.planMeta.goalSeverity=recalGap<=0.5?'green':(recalGap<=Math.max(1,extraGain*1.5)?'amber':'red');
+  state.planMeta.goalOutlookTitle=state.planMeta.goalSeverity==='green'?'Goal now aligns with time-trial fitness':(state.planMeta.goalSeverity==='amber'?'Goal remains ambitious — keep reassessing':'Stretch goal — current time-trial fitness is below target');
+  state.planMeta.goalOutlookDetail='Week '+ttWeek+' time trial: '+dist+' m in '+fmtTime(t)+' (VDOT '+newVdot.toFixed(1)+'). Goal: '+fmtTime(state.adjustedGoalTime)+'; VDOT gap '+(recalGap>=0?'+':'')+recalGap.toFixed(1)+'. Modelled race estimate after remaining training: '+fmtTime(projectedTime)+'; this is a heuristic, not a guarantee.';
   state.planMeta.subtitle='Recalibrated after Week '+ttWeek+' TT — new VDOT '+newVdot.toFixed(1)+' ('+fmtTime(t)+' @ '+dist+'m)';
   document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
   var goalCheckHtml=renderGoalCheck(projectedTime,projectedAtRace,newVdot);
@@ -2254,6 +2326,6 @@ refreshRestDaysUI();
 refreshBeginnerRestDaysUI();
 updateInputState();
 </script>
-<script src="/flight-coach/juju-mama.js"></script>
+  <script src="juju-mama.js"></script>
 </body>
 </html>
