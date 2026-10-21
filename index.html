@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pre-Flight Coach v27 — Training Logic & Plan Validation</title>
+<title>Pre-Flight Coach v28 — Training Logic & Plan Validation</title>
 <style>
   :root{
     --bg:#f5f5f7;--surface:#fff;--border:#e2e2e8;--text:#16161c;--muted:#6b6b78;
@@ -79,11 +79,16 @@
   .field-hint{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.4}
   .computed-box{background:#fafafb;border:1px dashed var(--border);border-radius:8px;padding:9px 12px;font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text);min-height:38px;display:flex;align-items:center}
   .computed-box.empty{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--sans);font-size:12.5px}
+
+  /* v28 — rest-day chips are buttons, no hidden checkbox */
   .rest-days{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-  .rest-days label{display:flex;align-items:center;gap:4px;font-size:12px;background:#fafafb;border:1px solid var(--border);padding:5px 9px;border-radius:6px;cursor:pointer;color:var(--muted);transition:all .15s;user-select:none}
-  .rest-days label:hover{border-color:#c8c8d0}
-  .rest-days label.on{background:var(--text);color:#fff;border-color:var(--text)}
-  .rest-days label.disabled{opacity:0.35;cursor:not-allowed;text-decoration:line-through}
+  .rest-days .rest-day{font:inherit;font-size:12px;font-weight:500;background:#fafafb;border:1px solid var(--border);padding:6px 11px;border-radius:6px;cursor:pointer;color:var(--muted);transition:all .15s;user-select:none;min-width:44px}
+  .rest-days .rest-day:hover:not(.disabled){border-color:#c8c8d0;background:#f5f5f7}
+  .rest-days .rest-day.on{background:var(--text);color:#fff;border-color:var(--text);font-weight:700}
+  .rest-days .rest-day.disabled{opacity:0.35;cursor:not-allowed;text-decoration:line-through;pointer-events:none}
+  .rest-days-hint{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;font-family:var(--mono)}
+  .rest-days-hint strong{color:var(--text);font-weight:600}
+
   .field-with-btn{position:relative}
   .field-with-btn .input-wrap{display:flex;gap:6px}
   .field-with-btn .input-wrap input{flex:1}
@@ -276,7 +281,7 @@
 
 <header class="header no-print">
   <h1>Pre-Flight Coach</h1>
-  <span class="version-pill" id="headerVersion">v27</span>
+  <span class="version-pill" id="headerVersion">v28</span>
   <span class="sub">Daniels' Formula · Adaptive Training Plan</span>
   <span class="spacer"></span>
   <button class="btn" id="printBtn">🖨 Print / Save PDF</button>
@@ -338,14 +343,15 @@
           <div class="field" style="grid-column:span 2">
             <label>Days off (long run day auto-locks)</label>
             <div class="rest-days" id="restDays">
-              <label data-d="0"><input type="checkbox">Sun</label>
-              <label data-d="1"><input type="checkbox">Mon</label>
-              <label data-d="2"><input type="checkbox">Tue</label>
-              <label data-d="3"><input type="checkbox">Wed</label>
-              <label data-d="4"><input type="checkbox">Thu</label>
-              <label data-d="5"><input type="checkbox">Fri</label>
-              <label data-d="6"><input type="checkbox">Sat</label>
+              <button type="button" class="rest-day" data-d="0" aria-pressed="false">Sun</button>
+              <button type="button" class="rest-day" data-d="1" aria-pressed="false">Mon</button>
+              <button type="button" class="rest-day" data-d="2" aria-pressed="false">Tue</button>
+              <button type="button" class="rest-day" data-d="3" aria-pressed="false">Wed</button>
+              <button type="button" class="rest-day" data-d="4" aria-pressed="false">Thu</button>
+              <button type="button" class="rest-day" data-d="5" aria-pressed="false">Fri</button>
+              <button type="button" class="rest-day" data-d="6" aria-pressed="false">Sat</button>
             </div>
+            <div class="rest-days-hint" id="restDaysHint">No rest days selected yet. Click a chip to toggle.</div>
           </div>
         </div>
       </div>
@@ -470,14 +476,15 @@
           <div class="field" style="grid-column:span 2">
             <label>Days off (long session day auto-locks)</label>
             <div class="rest-days" id="bRestDays">
-              <label data-d="0"><input type="checkbox">Sun</label>
-              <label data-d="1"><input type="checkbox">Mon</label>
-              <label data-d="2"><input type="checkbox">Tue</label>
-              <label data-d="3"><input type="checkbox">Wed</label>
-              <label data-d="4"><input type="checkbox">Thu</label>
-              <label data-d="5"><input type="checkbox">Fri</label>
-              <label data-d="6"><input type="checkbox">Sat</label>
+              <button type="button" class="rest-day" data-d="0" aria-pressed="false">Sun</button>
+              <button type="button" class="rest-day" data-d="1" aria-pressed="false">Mon</button>
+              <button type="button" class="rest-day" data-d="2" aria-pressed="false">Tue</button>
+              <button type="button" class="rest-day" data-d="3" aria-pressed="false">Wed</button>
+              <button type="button" class="rest-day" data-d="4" aria-pressed="false">Thu</button>
+              <button type="button" class="rest-day" data-d="5" aria-pressed="false">Fri</button>
+              <button type="button" class="rest-day" data-d="6" aria-pressed="false">Sat</button>
             </div>
+            <div class="rest-days-hint" id="bRestDaysHint">No rest days selected yet. Click a chip to toggle.</div>
           </div>
         </div>
       </div>
@@ -583,7 +590,7 @@
     <div class="fb-desc">Found a bug, an odd workout, or just want to share how the plan went? Send a note — this is a work in progress and every bit of feedback helps.</div>
     <div class="fb-email" id="feedbackEmail">ravikorurolu82@gmail.com</div>
     <div class="fb-actions">
-      <a class="fb-btn" id="feedbackLink" href="mailto:ravikorurolu82@gmail.com?subject=Pre-Flight%20Coach%20v27%20Feedback">✉ Open in email app</a>
+      <a class="fb-btn" id="feedbackLink" href="mailto:ravikorurolu82@gmail.com?subject=Pre-Flight%20Coach%20v28%20Feedback">✉ Open in email app</a>
       <button class="fb-btn ghost" id="copyEmailBtn" type="button">📋 Copy email address</button>
     </div>
   </div>
@@ -593,7 +600,7 @@
 <div class="copy-toast" id="copyToast">Email address copied</div>
 
 <script>
-var APP_VERSION = 'v27';
+var APP_VERSION = 'v28';
 
 function parseLocalDate(str){
   if (!str) return null;
@@ -805,10 +812,6 @@ function raceDayIndexInFinalWeek(startStr, endStr, weeks){
   return dates.length - 1;
 }
 
-/* ============================================================
-   v27 — Phase allocation follows Daniels fig 10.2 (p. 157)
-   Priority order: I → IV → II → III. Short plans skip Phase III.
-================================================================ */
 function computePhaseBoundaries(totalWeeks){
   if (totalWeeks <= 3) {
     return {I: totalWeeks, II: totalWeeks, III: totalWeeks, IV: totalWeeks, phaseIVStart: totalWeeks + 1};
@@ -1128,16 +1131,12 @@ function validateTrainingPlan(plan, cfg){
   return {valid:!issues.some(function(x){return x.severity==='error';}),issues:issues};
 }
 
-/* ============================================================
-   v27 — generatePlan with per-week caps, no R in Phase I,
-   fig 10.2 phase allocation, no first-Phase-IV taper.
-================================================================ */
 function generatePlan(cfg){
   var weeks=cfg.weeks,peakKm=cfg.peakKm,currentKm=cfg.currentKm||peakKm*0.6;
   var paceVdot = cfg.paceVdot || cfg.targetVdot || 40;
   var goalDist=cfg.goalDist,goalTime=cfg.goalTime;
   var peakCaps=computeCaps(peakKm,goalDist);
-  var caps=peakCaps;  // kept for any references outside the loop
+  var caps=peakCaps;
   var paces=paceFromVdot(paceVdot);
   var rawTargetLongMin=targetLongDurationMin(goalDist);
   var targetLongMin = Math.min(rawTargetLongMin, peakCaps.Lmin);
@@ -1203,7 +1202,6 @@ function generatePlan(cfg){
 
     var days=new Array(7).fill(null);
     var isRaceWeek=(w===weeks);
-    // v27: Phase IV no longer triggers a taper. Only the race week tapers.
     var isTaperWeek=false;
     var isTTWeek=(ttWeek !== null && w===ttWeek);
     var isSimWeek=(simWeeks.indexOf(w)>=0 && !isCutback);
@@ -1229,7 +1227,6 @@ function generatePlan(cfg){
         if(isRest(i)){days[i]=restDay();continue;}
         var dOut=raceIdx-i;
         if(dOut<0){days[i]=restDay();continue;}
-        // v27: final sharpener at 3 days out (Daniels p. 158: "3 or even 4 days before the race").
         if(dOut===3){days[i]={zone:'T',title:'3 × 1 km T',totalKm:5,detail:'2 min rests · final sharpener',isQ:true};}
         else if(dOut===2){days[i]=eRunKm(4,6);}
         else if(dOut===1){days[i]=eRunKm(3,0);}
@@ -1238,7 +1235,6 @@ function generatePlan(cfg){
         else {days[i]=eRunKm(5,0);}
       }
     } else {
-      // v27: session caps scale with THIS week's volume, per Daniels p. 87/99/101.
       var weekCaps = computeCaps(weekVol, goalDist);
       var longRunRef = null;
       if(longDayIdx>=0){
@@ -1247,7 +1243,6 @@ function generatePlan(cfg){
         longRunRef = days[longDayIdx] ? days[longDayIdx].totalKm : null;
       }
       var q1,q2,q3;
-      // v27: Phase I is all easy running with strides (Daniels p. 155).
       if(phase==='I'){q1=eRunKm(Math.max(6,Math.round(weekVol*0.18)),10);q2=eRunKm(Math.max(5,Math.round(weekVol*0.16)),8);q3=eRunKm(Math.max(5,Math.round(weekVol*0.14)),6);}
       else if(phase==='II'){q1=rSession(weekCaps,weekVol,w);q2=tSession(weekCaps,weekVol,w);q3=eRunKm(Math.max(6,Math.round(weekVol*0.15)),8);}
       else if(phase==='III'){
@@ -1338,12 +1333,9 @@ function generatePlan(cfg){
     totalKm=Math.round(totalKm*10)/10;
     out.push({
       number:w, phase:phase, totalKm:totalKm, trainingKm:totalKm, raceKm:Math.round(raceKm*1000)/1000,
-      totalRunningKm:Math.round((totalKm+raceKm)*10)/10, days:days, paces:paces,
-      isTT:isTTWeek, isSim:isSimWeek, isCutback:isCutback, isModReduced:isModReduced,
-      capResult:capResult, startDate:cfg.startDate, weekLen:weekLen
+      totalRunningKm:Math.round((totalKm+raceKm)*10)/10, days:days, paces:pac
     });
   }
-  // Final marathon safeguard: never leave consecutive 30+ km long runs.
   for(var li=1;li<out.length;li++){
     var priorLong=(out[li-1].days||[]).find(function(d){return d && d.isLongRun;});
     var nextLong=(out[li].days||[]).find(function(d){return d && d.isLongRun;});
@@ -1357,7 +1349,7 @@ function generatePlan(cfg){
       out[li-1].capResult=enforceWeeklyMileageCap(out[li-1],peakKm,false,peakKm);
     }
   }
-  var result={weeks:out,caps:caps,paces:paces,rehearsalNeeded:rehearsalNeeded,ttWeek:ttWeek,ttDistance:ttDistance,ttDistanceLabel:ttDistanceLabel,startDate:cfg.startDate,bounds:bounds};
+  var result={weeks:out,caps:caps,paces:pac,rehearsalNeeded:rehearsalNeeded,ttWeek:ttWeek,ttDistance:ttDistance,ttDistanceLabel:ttDistanceLabel,startDate:cfg.startDate,bounds:bounds};
   result.validation=validateTrainingPlan(result,cfg);
   return result;
 }
@@ -1559,7 +1551,6 @@ function checkItem(name,value,detail,cls){return '<div class="check '+cls+'"><di
 function paceRow(zone,name,primary,secondary){
   return '<div class="pace-row"><span class="zone-badge z-'+zone+'">'+zone+'</span><div><div class="pace-name">'+name+'</div><div class="pace-values"><span class="primary">'+primary+'</span>'+(secondary?'<span class="secondary">'+secondary+'</span>':'')+'</div></div></div>';
 }
-/* v27 — M pace only shown for half marathon and longer goals (Daniels p. 54). */
 function renderPaceSummary(paces, goalDist){
   var html = '<h2 style="margin-top:14px">Training paces</h2>'+
     paceRow('E','Easy / Long',paceKm(paces.E_slow)+' – '+paceKm(paces.E_fast),'');
@@ -2046,50 +2037,60 @@ function renderGoalCheck(projectedTime,projectedVdot,currentVdot){
 }
 function dismissGoalCheck(action,newTime){ var panel=document.getElementById('goalCheck'); if(!panel)return; panel.remove(); }
 
+/* v28 — rest-day chips are plain buttons; no label/checkbox interference */
+function refreshRestDaysHint(setObj, hintEl, longDay){
+  if (!hintEl) return;
+  var arr = [];
+  setObj.forEach(function(d){ arr.push(d); });
+  arr.sort(function(a,b){ return a-b; });
+  var names = arr.map(function(d){ return DAY_NAMES[d]; });
+  if (names.length === 0){
+    hintEl.innerHTML = 'No rest days selected yet. Click a chip to toggle. · Locked: <strong>'+DAY_FULL_NAMES[longDay]+'</strong> (long run)';
+  } else {
+    hintEl.innerHTML = 'Rest days: <strong>'+names.join(', ')+'</strong> · Locked: <strong>'+DAY_FULL_NAMES[longDay]+'</strong> (long run)';
+  }
+}
 function refreshRestDaysUI(){
   var longDay=parseInt(document.getElementById('longRunDay').value);
   state.longDay=longDay;
-  var labels=document.querySelectorAll('#restDays label');
-  for(var i=0;i<labels.length;i++){
-    var lbl=labels[i]; var d=parseInt(lbl.getAttribute('data-d'));
-    if(d===longDay){lbl.classList.add('disabled');lbl.classList.remove('on');state.allRestDays.delete(d);}
-    else {lbl.classList.remove('disabled');}
-  }
+  var btns=document.querySelectorAll('#restDays .rest-day');
+  btns.forEach(function(btn){
+    var d=parseInt(btn.getAttribute('data-d'),10);
+    if(d===longDay){btn.classList.add('disabled');btn.classList.remove('on');btn.setAttribute('aria-pressed','false');state.allRestDays.delete(d);}
+    else {btn.classList.remove('disabled');}
+  });
+  refreshRestDaysHint(state.allRestDays, document.getElementById('restDaysHint'), longDay);
 }
 function refreshBeginnerRestDaysUI(){
   var longDay=parseInt(document.getElementById('bLongRunDay').value);
   state.beginnerLongDay=longDay;
-  var labels=document.querySelectorAll('#bRestDays label');
-  for(var i=0;i<labels.length;i++){
-    var lbl=labels[i]; var d=parseInt(lbl.getAttribute('data-d'));
-    if(d===longDay){lbl.classList.add('disabled');lbl.classList.remove('on');state.beginnerRestDays.delete(d);}
-    else {lbl.classList.remove('disabled');}
-  }
+  var btns=document.querySelectorAll('#bRestDays .rest-day');
+  btns.forEach(function(btn){
+    var d=parseInt(btn.getAttribute('data-d'),10);
+    if(d===longDay){btn.classList.add('disabled');btn.classList.remove('on');btn.setAttribute('aria-pressed','false');state.beginnerRestDays.delete(d);}
+    else {btn.classList.remove('disabled');}
+  });
+  refreshRestDaysHint(state.beginnerRestDays, document.getElementById('bRestDaysHint'), longDay);
 }
-var restLabels=document.querySelectorAll('#restDays label');
-for(var i=0;i<restLabels.length;i++){
-  (function(lbl){
-    lbl.addEventListener('click',function(e){
+function wireRestDayButtons(containerId, setObj, longDayFn, hintId){
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.rest-day').forEach(function(btn){
+    btn.addEventListener('click', function(e){
       e.preventDefault();
-      var d=parseInt(lbl.getAttribute('data-d'));
-      if(d===state.longDay)return;
-      if(state.allRestDays.has(d))state.allRestDays.delete(d);else state.allRestDays.add(d);
-      if(state.allRestDays.has(d))lbl.classList.add('on');else lbl.classList.remove('on');
+      var d = parseInt(btn.getAttribute('data-d'), 10);
+      if (isNaN(d)) return;
+      if (d === longDayFn()) return;
+      if (setObj.has(d)) { setObj.delete(d); btn.classList.remove('on'); btn.setAttribute('aria-pressed','false'); }
+      else { setObj.add(d); btn.classList.add('on'); btn.setAttribute('aria-pressed','true'); }
+      refreshRestDaysHint(setObj, document.getElementById(hintId), longDayFn());
+      updateInputState();
     });
-  })(restLabels[i]);
+  });
 }
-var bRestLabels=document.querySelectorAll('#bRestDays label');
-for(var i=0;i<bRestLabels.length;i++){
-  (function(lbl){
-    lbl.addEventListener('click',function(e){
-      e.preventDefault();
-      var d=parseInt(lbl.getAttribute('data-d'));
-      if(d===state.beginnerLongDay)return;
-      if(state.beginnerRestDays.has(d))state.beginnerRestDays.delete(d);else state.beginnerRestDays.add(d);
-      if(state.beginnerRestDays.has(d))lbl.classList.add('on');else lbl.classList.remove('on');
-    });
-  })(bRestLabels[i]);
-}
+wireRestDayButtons('restDays', state.allRestDays, function(){ return state.longDay; }, 'restDaysHint');
+wireRestDayButtons('bRestDays', state.beginnerRestDays, function(){ return state.beginnerLongDay; }, 'bRestDaysHint');
+
 document.getElementById('longRunDay').addEventListener('change',function(){refreshRestDaysUI();updateInputState();});
 document.getElementById('bLongRunDay').addEventListener('change',function(){refreshBeginnerRestDaysUI();updateInputState();});
 
@@ -2242,7 +2243,6 @@ function adjustWorkout(day, mode, isFirstQOfWeek){
   return null;
 }
 
-/* Time field numeric input setup */
 setupTimeField('curTime');
 setupTimeField('goalTime');
 
