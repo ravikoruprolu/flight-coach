@@ -225,7 +225,9 @@
   .feedback-footer button.fb-btn.ghost:hover{background:#fafafb}
   .copy-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#16161c;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;z-index:100;pointer-events:none}
   .copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  @media print{
+  .validation-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-bottom:16px;color:#991b1b}
+  .validation-banner .vb-title{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .validation-banner ul{margin:0;padding-left:18px;font-size:12px;line-height:1.5}<span class="version-  @media print{
     @page{size:A4 portrait;margin:10mm 8mm}
     html,body{background:#fff;font-size:10pt}
     .header,.no-print,#inputCard,#verdict,.suggest-popover,.recal-panel,.goal-check,.app-header,.copy-toast,.feel-panel{display:none!important}
@@ -281,7 +283,7 @@
 
 <header class="header no-print">
   <h1>Pre-Flight Coach</h1>
-  <span class="version-pill" id="headerVersion">v28</span>
+<span class="version-pill" id="headerVersion">v28</span>
   <span class="sub"> Team RAYS initiative· Adaptive Training Plan</span>
   <span class="spacer"></span>
   <button class="btn" id="printBtn">🖨 Print / Save PDF</button>
@@ -1679,8 +1681,21 @@ function renderPlan(result,meta,userName){
   if (!isBeginner){
     html+='<div class="print-info-item"><div class="pi-label">Peak weekly (actual plan)</div><div class="pi-value">'+peakKm.toFixed(1).replace(/\.0$/,'')+' km</div></div>';
   }
-  html+='<div class="print-info-item"><div class="pi-label">Long run day</div><div class="pi-value">'+meta.longRunDay+'</div></div>';
+    html+='<div class="print-info-item"><div class="pi-label">Long run day</div><div class="pi-value">'+meta.longRunDay+'</div></div>';
+  if (!isBeginner){
+    html+='<div class="print-info-item"><div class="pi-label">Rest days</div><div class="pi-value">'+(meta.restDaysStr||'None')+'</div></div>';
+  }
   html+='</div></div>';
+  if (!isBeginner && result.validation && result.validation.issues && result.validation.issues.length > 0){
+    var errs = result.validation.issues.filter(function(i){return i.severity==='error';});
+    if (errs.length > 0){
+      html+='<div class="validation-banner"><div class="vb-title">⚠ Plan validation issues</div><ul>';
+      errs.forEach(function(e){
+        html+='<li>Week '+e.week+': '+e.ruleId+' — expected '+e.expected+(e.observed!==undefined?' (observed: '+e.observed+')':'')+'</li>';
+      });
+      html+='</ul></div>';
+    }
+  }
   if(!isBeginner && meta.goalOutlookTitle && meta.goalOutlookDetail){
     html+='<div class="verdict-banner '+escapeHtml(meta.goalSeverity||'amber')+' plan-goal-note"><div class="body"><div class="label">Goal outlook</div><div class="title">'+escapeHtml(meta.goalOutlookTitle)+'</div><div class="desc">'+escapeHtml(meta.goalOutlookDetail)+'</div></div></div>';
   }
@@ -1878,7 +1893,21 @@ function updateInputState(){
 }
 function runAnalysis(){ if (state.planType === 'beginner'){ runBeginnerAnalysis(); } else { runStandardAnalysis(); } }
 
-function runStandardAnalysis(){
+var regenTimer = null;
+function scheduleRegenerate(){
+  if (!state.plan) return;
+  clearTimeout(regenTimer);
+  regenTimer = setTimeout(function(){
+    var missing;
+    if (state.planType === 'standard') missing = validateStandard(readCfgStandard());
+    else missing = validateBeginner(readCfgBeginner());
+    if (missing.length > 0) return;
+    if (state.planType === 'standard') runStandardAnalysis(true);
+    else runBeginnerAnalysis(true);
+  }, 400);
+}
+
+function runStandardAnalysis(silent){
   var cfg=readCfgStandard();
   var missing=validateStandard(cfg);
   if(missing.length>0){updateInputState();return;}
@@ -1911,7 +1940,13 @@ function runStandardAnalysis(){
     currentVdot:a.currentVdot, targetVdot:a.targetVdot,
     currentAbilityStr:fmtTime(findRaceTime(a.currentVdot,cfg.goalDist)),
     raceDateStr:fmtDateLong(raceDateObj), firstDayStr:fmtDateLong(startDateObj),
-    peakKm:cfg.peakKm, longRunDay:DAY_FULL_NAMES[cfg.longDay],
+        peakKm:cfg.peakKm, longRunDay:DAY_FULL_NAMES[cfg.longDay],
+    restDaysStr: (function(){
+      var arr = [];
+      state.allRestDays.forEach(function(d){ arr.push(d); });
+      arr.sort(function(a,b){return a-b;});
+      return arr.length > 0 ? arr.map(function(d){ return DAY_NAMES[d]; }).join(', ') : 'None';
+    })(),
     goalDist:cfg.goalDist,
     goalSeverity:a.severity,
     goalOutlookTitle:({green:'Goal compatible with current fitness estimate',amber:'Ambitious goal — reassess at the time trial',red:'Stretch goal — current fitness is far from target'})[a.severity],
@@ -1922,10 +1957,10 @@ function runStandardAnalysis(){
     document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
     setupTimeField('ttTime');
   }
-  updateFeelNote();
-  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
+    updateFeelNote();
+  if (!silent) document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
 }
-function runBeginnerAnalysis(){
+function runBeginnerAnalysis(silent){
   var cfg = readCfgBeginner();
   var missing = validateBeginner(cfg);
   if(missing.length>0){updateInputState();return;}
@@ -1948,9 +1983,9 @@ function runBeginnerAnalysis(){
     raceDateStr: fmtDateLong(raceDateObj), firstDayStr: fmtDateLong(startDateObj),
     longRunDay: DAY_FULL_NAMES[cfg.longDay], peakKm: 0
   };
-  document.getElementById('plan').innerHTML = renderPlan(planResult, state.planMeta, state.userName);
+    document.getElementById('plan').innerHTML = renderPlan(planResult, state.planMeta, state.userName);
   updateFeelNote();
-  document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
+  if (!silent) document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function handleRecalibrate(){
   var dist=parseFloat(document.getElementById('ttDistance').value);
@@ -2083,17 +2118,17 @@ function wireRestDayButtons(containerId, setObj, longDayFn, hintId){
       if (d === longDayFn()) return;
       if (setObj.has(d)) { setObj.delete(d); btn.classList.remove('on'); btn.setAttribute('aria-pressed','false'); }
       else { setObj.add(d); btn.classList.add('on'); btn.setAttribute('aria-pressed','true'); }
-      refreshRestDaysHint(setObj, document.getElementById(hintId), longDayFn());
+            refreshRestDaysHint(setObj, document.getElementById(hintId), longDayFn());
       updateInputState();
+      scheduleRegenerate();
     });
   });
 }
 wireRestDayButtons('restDays', state.allRestDays, function(){ return state.longDay; }, 'restDaysHint');
 wireRestDayButtons('bRestDays', state.beginnerRestDays, function(){ return state.beginnerLongDay; }, 'bRestDaysHint');
 
-document.getElementById('longRunDay').addEventListener('change',function(){refreshRestDaysUI();updateInputState();});
-document.getElementById('bLongRunDay').addEventListener('change',function(){refreshBeginnerRestDaysUI();updateInputState();});
-
+document.getElementById('longRunDay').addEventListener('change',function(){refreshRestDaysUI();updateInputState();scheduleRegenerate();});
+document.getElementById('bLongRunDay').addEventListener('change',function(){refreshBeginnerRestDaysUI();updateInputState();scheduleRegenerate();});
 document.querySelectorAll('.plan-tab').forEach(function(tab){
   tab.addEventListener('click', function(){
     document.querySelectorAll('.plan-tab').forEach(function(t){ t.classList.remove('on'); });
@@ -2251,8 +2286,8 @@ for(var i=0;i<inputIds.length;i++){
   (function(id){
     var el=document.getElementById(id);
     if (!el) return;
-    el.addEventListener('input',updateInputState);
-    el.addEventListener('change',updateInputState);
+    el.addEventListener('input',function(){ updateInputState(); scheduleRegenerate(); });
+    el.addEventListener('change',function(){ updateInputState(); scheduleRegenerate(); });
   })(inputIds[i]);
 }
 document.getElementById('useMinimumWeeksBtn').addEventListener('click',function(){setStartDateForDuration('minimum');});
