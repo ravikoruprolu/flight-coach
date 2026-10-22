@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pre-Flight Coach v28 — Adaptive Training Plan </title>
-  <style>
+<title>Pre-Flight Coach v28 — Training Logic & Plan Validation</title>
+<style>
   :root{
     --bg:#f5f5f7;--surface:#fff;--border:#e2e2e8;--text:#16161c;--muted:#6b6b78;
     --green:#10b981;--green-bg:#ecfdf5;--green-bd:#a7f3d0;--green-tx:#065f46;
@@ -51,36 +51,15 @@
   .field > input:focus,.field > select:focus{outline:none;border-color:var(--text);box-shadow:0 0 0 3px rgba(23,23,28,.08)}
   .field > input::placeholder{color:#b0b0bb}
   .field.invalid > input,.field.invalid > select{border-color:var(--red);background:#fef2f2}
-
-  .time-input{
-    display:flex;align-items:center;
-    border:1px solid var(--border);border-radius:8px;
-    padding:0 10px;background:var(--surface);
-    font-family:var(--mono);font-size:14px;
-    transition:all .15s;height:38px;
-  }
+  .time-input{display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;padding:0 10px;background:var(--surface);font-family:var(--mono);font-size:14px;transition:all .15s;height:38px}
   .time-input:focus-within{border-color:var(--text);box-shadow:0 0 0 3px rgba(23,23,28,.08)}
   .field.invalid .time-input{border-color:var(--red);background:#fef2f2}
-  .time-input input{
-    border:none;outline:none;background:transparent;
-    width:38px;text-align:center;font:inherit;
-    padding:0;color:var(--text);font-family:var(--mono);
-    font-weight:600;
-  }
+  .time-input input{border:none;outline:none;background:transparent;width:38px;text-align:center;font:inherit;padding:0;color:var(--text);font-family:var(--mono);font-weight:600}
   .time-input input::placeholder{color:#c8c8d0;font-weight:500}
-  .time-input .sep{
-    color:var(--muted);font-weight:700;padding:0 3px;
-    user-select:none;font-family:var(--mono);
-  }
-  .time-input input::-webkit-outer-spin-button,
-  .time-input input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  .time-input input[type=number]{-moz-appearance:textfield}
-
+  .time-input .sep{color:var(--muted);font-weight:700;padding:0 3px;user-select:none;font-family:var(--mono)}
   .field-hint{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.4}
   .computed-box{background:#fafafb;border:1px dashed var(--border);border-radius:8px;padding:9px 12px;font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text);min-height:38px;display:flex;align-items:center}
   .computed-box.empty{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--sans);font-size:12.5px}
-
-  /* v28 — rest-day chips are buttons, no hidden checkbox */
   .rest-days{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
   .rest-days .rest-day{font:inherit;font-size:12px;font-weight:500;background:#fafafb;border:1px solid var(--border);padding:6px 11px;border-radius:6px;cursor:pointer;color:var(--muted);transition:all .15s;user-select:none;min-width:44px}
   .rest-days .rest-day:hover:not(.disabled){border-color:#c8c8d0;background:#f5f5f7}
@@ -88,10 +67,6 @@
   .rest-days .rest-day.disabled{opacity:0.35;cursor:not-allowed;text-decoration:line-through;pointer-events:none}
   .rest-days-hint{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4;font-family:var(--mono)}
   .rest-days-hint strong{color:var(--text);font-weight:600}
-
-  .field-with-btn{position:relative}
-  .field-with-btn .input-wrap{display:flex;gap:6px}
-  .field-with-btn .input-wrap input{flex:1}
   .feel-panel{background:linear-gradient(135deg,#fff7ed,#fed7aa);border:1px solid #fdba74;border-radius:12px;padding:18px;margin-bottom:16px}
   .feel-panel.collapsed{background:var(--surface);border-color:var(--border)}
   .feel-panel .fp-head{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
@@ -122,8 +97,6 @@
   .adjust-badge.sick{background:#ef4444}
   .adjust-badge.busy{background:#3b82f6}
   .adjust-was{font-size:9px;color:#92400e;font-style:italic;margin-top:3px;line-height:1.3;opacity:.8}
-  td.adjusted-cell.sick .adjust-was{color:#991b1b}
-  td.adjusted-cell.busy .adjust-was{color:#1e40af}
   td.cutback-cell{background:#f0fdf4!important}
   td.reduced-cell{background:#f0fdf4!important}
   .verdict-banner{padding:20px 24px;border-radius:12px;margin-bottom:18px;border:2px solid;display:flex;gap:16px;align-items:flex-start}
@@ -227,10 +200,12 @@
   .copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .validation-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-bottom:16px;color:#991b1b}
   .validation-banner .vb-title{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
-  .validation-banner ul{margin:0;padding-left:18px;font-size:12px;line-height:1.5}<span class="version-  @media print{
+  .validation-banner ul{margin:0;padding-left:18px;font-size:12px;line-height:1.5}
+  .regen-note{font-size:11px;color:var(--muted);margin-top:6px;font-style:italic}
+  @media print{
     @page{size:A4 portrait;margin:10mm 8mm}
     html,body{background:#fff;font-size:10pt}
-    .header,.no-print,#inputCard,#verdict,.suggest-popover,.recal-panel,.goal-check,.app-header,.copy-toast,.feel-panel{display:none!important}
+    .header,.no-print,#inputCard,#verdict,.recal-panel,.goal-check,.copy-toast,.feel-panel,.validation-banner,.regen-note{display:none!important}
     .wrap{padding:0;max-width:none;margin:0}
     #plan{margin:0}
     #plan > .card:first-child{border:none;box-shadow:none;padding:0;margin-bottom:3mm;border-bottom:1.5px solid #000;padding-bottom:2.5mm;border-radius:0;page-break-inside:avoid}
@@ -267,7 +242,6 @@
     .cell-title{font-size:8pt;margin-bottom:0.3mm;line-height:1.2}
     .cell-detail{font-size:6.5pt;line-height:1.2;margin-bottom:0.3mm}
     .cell-meta{font-size:6.5pt;margin-top:0.5mm;line-height:1.2}
-    .cell-meta .pace-bit{font-size:6.5pt}
     .cell-why{display:none!important}
     .week-why{display:none!important}
     .feedback-footer{margin-top:3mm;padding:2mm;border:0.5pt solid #999;border-radius:0;background:#f9f9f9!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-inside:avoid}
@@ -283,8 +257,8 @@
 
 <header class="header no-print">
   <h1>Pre-Flight Coach</h1>
-<span class="version-pill" id="headerVersion">v28</span>
-  <span class="sub"> Team RAYS initiative· Adaptive Training Plan</span>
+  <span class="version-pill" id="headerVersion">v28</span>
+  <span class="sub">Team RAYS initiative· Adaptive Training Plan</span>
   <span class="spacer"></span>
   <button class="btn" id="printBtn">🖨 Print / Save PDF</button>
 </header>
@@ -305,7 +279,6 @@
           <div class="pt-desc">You're starting from scratch. Generates a walk/run progression plan. No VDOT needed.</div>
         </button>
       </div>
-
       <div class="field">
         <label>Your name <span class="req">*</span></label>
         <input id="userName" type="text" placeholder="e.g. Siva" autocomplete="off">
@@ -353,7 +326,7 @@
               <button type="button" class="rest-day" data-d="5" aria-pressed="false">Fri</button>
               <button type="button" class="rest-day" data-d="6" aria-pressed="false">Sat</button>
             </div>
-            <div class="rest-days-hint" id="restDaysHint">No rest days selected yet. Click a chip to toggle.</div>
+            <div class="rest-days-hint" id="restDaysHint">No rest days selected yet.</div>
           </div>
         </div>
       </div>
@@ -383,7 +356,7 @@
               <span class="sep">:</span>
               <input type="tel" id="curTimeS" maxlength="2" placeholder="00" inputmode="numeric" aria-label="seconds">
             </div>
-            <div class="field-hint">HH : MM : SS &nbsp;·&nbsp; minutes and seconds 0–59</div>
+            <div class="field-hint">HH : MM : SS</div>
           </div>
           <div class="field" id="field-currentKm">
             <label>Current weekly km <span class="req">*</span></label>
@@ -414,7 +387,7 @@
               <span class="sep">:</span>
               <input type="tel" id="goalTimeS" maxlength="2" placeholder="00" inputmode="numeric" aria-label="seconds">
             </div>
-            <div class="field-hint">HH : MM : SS &nbsp;·&nbsp; minutes and seconds 0–59</div>
+            <div class="field-hint">HH : MM : SS</div>
           </div>
         </div>
       </div>
@@ -429,7 +402,6 @@
               <option value="regular" selected>Regular runner</option>
               <option value="experienced">Experienced endurance runner</option>
             </select>
-            <div class="field-hint">Used to keep the calculated mileage progression appropriate.</div>
           </div>
           <div class="field">
             <label>Plan length guidance</label>
@@ -438,7 +410,6 @@
               <button class="btn mini" id="useMinimumWeeksBtn" type="button">Use minimum plan</button>
               <button class="btn mini" id="useRecommendedWeeksBtn" type="button">Use recommended plan</button>
             </div>
-            <div class="field-hint">Choose a suggested build length to set the start date, or keep your own dates.</div>
           </div>
         </div>
         <input id="peakKm" type="hidden" value="">
@@ -454,7 +425,7 @@
             <input id="bStartDate" type="date">
           </div>
           <div class="field" id="field-bRaceDate">
-            <label>Race day (or a milestone day) <span class="req">*</span></label>
+            <label>Race day (or milestone) <span class="req">*</span></label>
             <input id="bRaceDate" type="date">
           </div>
           <div class="field">
@@ -486,7 +457,7 @@
               <button type="button" class="rest-day" data-d="5" aria-pressed="false">Fri</button>
               <button type="button" class="rest-day" data-d="6" aria-pressed="false">Sat</button>
             </div>
-            <div class="rest-days-hint" id="bRestDaysHint">No rest days selected yet. Click a chip to toggle.</div>
+            <div class="rest-days-hint" id="bRestDaysHint">No rest days selected yet.</div>
           </div>
         </div>
       </div>
@@ -532,6 +503,7 @@
 
     <button class="btn primary" id="analyzeBtn" style="margin-top:6px;width:100%;padding:11px" disabled>Fill all fields →</button>
     <div class="input-status missing" id="inputStatus">Complete the form above to generate a plan.</div>
+    <div class="regen-note" id="regenNote" style="display:none">The plan auto-updates as you change inputs. Click "Analyze & generate" at any time to force a fresh plan.</div>
   </div>
 
   <div class="feel-panel collapsed no-print" id="feelPanel">
@@ -580,7 +552,7 @@
         <button class="btn primary" id="feelApply" disabled>Apply</button>
         <button class="btn" id="feelClear">Clear</button>
       </div>
-      <div class="fp-note" id="feelNote">Select a mode and click Apply. The adjusted days will be highlighted; other days stay untouched.</div>
+      <div class="fp-note" id="feelNote">Select a mode and click Apply.</div>
     </div>
   </div>
 
@@ -589,7 +561,7 @@
 
   <div class="feedback-footer" id="feedbackFooter">
     <div class="fb-title">Was this plan useful?</div>
-    <div class="fb-desc">Found a bug, an odd workout, or just want to share how the plan went? Send a note — this is a work in progress and every bit of feedback helps.</div>
+    <div class="fb-desc">Found a bug, an odd workout, or just want to share how the plan went? Send a note — every bit of feedback helps.</div>
     <div class="fb-email" id="feedbackEmail">ravikorurolu82@gmail.com</div>
     <div class="fb-actions">
       <a class="fb-btn" id="feedbackLink" href="mailto:ravikorurolu82@gmail.com?subject=Pre-Flight%20Coach%20v28%20Feedback">✉ Open in email app</a>
@@ -603,6 +575,8 @@
 
 <script>
 var APP_VERSION = 'v28';
+var DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var DAY_FULL_NAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 function parseLocalDate(str){
   if (!str) return null;
@@ -655,13 +629,6 @@ function writeTimeField(prefix, sec){
   mEl.value = (h > 0 || m > 0) ? String(m).padStart(2,'0') : '';
   sEl.value = String(s).padStart(2,'0');
 }
-function clearTimeField(prefix){
-  var ids = ['H','M','S'];
-  for (var i=0;i<ids.length;i++){
-    var el = document.getElementById(prefix+ids[i]);
-    if (el) el.value = '';
-  }
-}
 function setupTimeField(prefix){
   var units = ['H','M','S'];
   units.forEach(function(u, idx){
@@ -674,7 +641,7 @@ function setupTimeField(prefix){
         var next = document.getElementById(prefix+units[idx+1]);
         if (next){ next.focus(); next.select(); }
       }
-      updateInputState();
+      onAnyInput();
     });
     el.addEventListener('keydown', function(e){
       if (e.key === 'Backspace' && e.target.value === '' && idx > 0){
@@ -692,7 +659,7 @@ function setupTimeField(prefix){
     });
     el.addEventListener('blur', function(){
       if (el.value.length === 1) el.value = '0' + el.value;
-      updateInputState();
+      onAnyInput();
     });
     el.addEventListener('focus', function(){ el.select(); });
   });
@@ -705,22 +672,6 @@ function fmtTime(sec,opt){
   if(h>0)return h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
   if(opt.alwaysMin||m>0)return m+':'+(s<10?'0':'')+s;
   return s+'s';
-}
-function parseTime(str, distanceM){
-  if(!str||!String(str).trim())return null;
-  var trimmed = String(str).trim();
-  if (trimmed.indexOf(':') >= 0){
-    var parts = trimmed.split(':').map(Number);
-    for(var i=0;i<parts.length;i++){if(isNaN(parts[i]))return null;}
-    if(parts.length===2)return parts[0]*60+parts[1];
-    if(parts.length===3)return parts[0]*3600+parts[1]*60+parts[2];
-    return null;
-  }
-  var num = Number(trimmed);
-  if (isNaN(num) || num <= 0) return null;
-  if (distanceM && distanceM >= 3000 && num >= 5) return num * 60;
-  if (distanceM && distanceM >= 3000 && num < 5) return num * 60;
-  return num;
 }
 function paceKmShort(sec){
   var t=Math.round(sec);
@@ -736,9 +687,16 @@ function pace400(sec){
 function findRaceTime(vdot,dM){var lo=60,hi=60*300;for(var i=0;i<60;i++){var mid=(lo+hi)/2;if(Vdot.fromRace(dM,mid)>vdot)lo=mid;else hi=mid;}return (lo+hi)/2;}
 function fmtDateShort(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function fmtDateLong(d){return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});}
-function dayNameOf(d){return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];}
+function dayNameOf(d){return DAY_NAMES[d.getDay()];}
 function diffDays(a,b){return Math.round((b-a)/(1000*60*60*24));}
 function isMarathonDistance(g){ return parseFloat(g) === 42195; }
+function formatRestDays(set){
+  if (!set || set.size === 0) return 'None';
+  var arr = [];
+  set.forEach(function(d){ arr.push(d); });
+  arr.sort(function(a,b){ return a - b; });
+  return arr.map(function(d){ return DAY_NAMES[d]; }).join(', ');
+}
 
 var ELITE_MIN_SECONDS = {1500:206, 1609.344:223, 3000:440, 5000:755, 10000:1571, 21097.5:3480, 42195:7235};
 function validateRaceInput(distanceM, timeSec){
@@ -761,7 +719,7 @@ function validateRaceInput(distanceM, timeSec){
     return {valid: false, reason: 'That time implies a fitness level above the world\'s best.'};
   }
   if (vdot < 10){
-    return {valid: false, reason: 'That time implies a fitness below what VDOT handles well. If you\'re just starting out, try <strong>"I\'m new to running"</strong> mode.'};
+    return {valid: false, reason: 'That time implies a fitness below what VDOT handles well.'};
   }
   return {valid: true, vdot: vdot};
 }
@@ -827,25 +785,13 @@ function computePhaseBoundaries(totalWeeks){
     var iiW = Math.min(3, totalWeeks - iW - ivW);
     var iiiW = totalWeeks - iW - iiW - ivW;
     if (iiiW < 0) { iiiW = 0; iiW = totalWeeks - iW - ivW; }
-    return {
-      I: iW,
-      II: iW + iiW,
-      III: iW + iiW + iiiW,
-      IV: totalWeeks,
-      phaseIVStart: iW + iiW + iiiW + 1
-    };
+    return {I: iW, II: iW + iiW, III: iW + iiW + iiiW, IV: totalWeeks, phaseIVStart: iW + iiW + iiiW + 1};
   }
   var ivW = 3;
   var iW = Math.min(6, Math.max(3, Math.round(totalWeeks * 0.25)));
   var iiW = Math.min(6, Math.max(3, Math.round(totalWeeks * 0.20)));
   var iiiW = totalWeeks - iW - iiW - ivW;
-  return {
-    I: iW,
-    II: iW + iiW,
-    III: iW + iiW + iiiW,
-    IV: totalWeeks,
-    phaseIVStart: iW + iiW + iiiW + 1
-  };
+  return {I: iW, II: iW + iiW, III: iW + iiW + iiiW, IV: totalWeeks, phaseIVStart: iW + iiW + iiiW + 1};
 }
 function paceFromVdot(vdot){
   return {E_slow:Vdot.timeFor(vdot,PCT.E_SLOW,1000),E_fast:Vdot.timeFor(vdot,PCT.E_FAST,1000),M:Vdot.timeFor(vdot,PCT.M,1000),T:Vdot.timeFor(vdot,PCT.T,1000),T400:Vdot.timeFor(vdot,PCT.T,400),I:Vdot.timeFor(vdot,PCT.I,1000),I400:Vdot.timeFor(vdot,PCT.I,400),R:Vdot.timeFor(vdot,PCT.R,1000),R400:Vdot.timeFor(vdot,PCT.R,400),R200:Vdot.timeFor(vdot,PCT.R,200)};
@@ -856,12 +802,9 @@ function minAdequateVolume(goalDist,targetVdot){
   var key = String(goalDist);
   var distFactor={'5000':0.9,'10000':1.0,'21097.5':1.1,'42195':1.2}[key]||1.0;
   var vdotFactor;
-  if(targetVdot<35)vdotFactor=0.7;
-  else if(targetVdot<45)vdotFactor=0.9;
-  else if(targetVdot<55)vdotFactor=1.15;
-  else if(targetVdot<65)vdotFactor=1.4;
-  else if(targetVdot<75)vdotFactor=1.7;
-  else vdotFactor=2.0;
+  if(targetVdot<35)vdotFactor=0.7; else if(targetVdot<45)vdotFactor=0.9;
+  else if(targetVdot<55)vdotFactor=1.15; else if(targetVdot<65)vdotFactor=1.4;
+  else if(targetVdot<75)vdotFactor=1.7; else vdotFactor=2.0;
   return 45*distFactor*vdotFactor;
 }
 function targetLongDurationMin(goalDist){
@@ -873,6 +816,38 @@ function realisticGain(weeklyKm,adequateVol,weeks){
   if(weeklyKm<adequateVol)base*=Math.max(0.35,weeklyKm/adequateVol);
   return base*(weeks/14);
 }
+function computeCaps(peakKm,goalDist){
+  var isMar = isMarathonDistance(goalDist);
+  var lMaxKm = isMar ? 35 : 30;
+  var lMaxMin = isMar ? 195 : 150;
+  var lCap;
+  if (isMar) {
+    if (peakKm >= 85) lCap = Math.min(35, Math.max(32, peakKm * 0.40));
+    else if (peakKm >= 70) lCap = Math.min(32, Math.max(30, peakKm * 0.46));
+    else if (peakKm >= 60) lCap = Math.min(30, peakKm * 0.46);
+    else lCap = Math.min(28, peakKm * 0.46);
+  } else {
+    lCap = Math.min(peakKm * 0.32, lMaxKm);
+  }
+  var lDurationCap = isMar && peakKm >= 70 ? lMaxMin : Math.min(lCap * 6.5, lMaxMin);
+  return {R:Math.min(peakKm*0.05,8),I:Math.min(peakKm*0.08,10),T:Math.min(peakKm*0.10,16),L:Math.round(lCap),Lmin:Math.round(Math.min(lCap*6.5,lDurationCap))};
+}
+function chooseTTDistance(goalDist, peakKm){
+  var goalTargets = {'800':1000,'1500':1500,'1609.344':1609,'3000':3000,'5000':5000,'10000':5000,'21097.5':10000,'42195':10000};
+  var target = goalTargets[String(goalDist)] || 5000;
+  var maxFromVolume = peakKm * 0.15 * 1000;
+  var tt = Math.min(target, maxFromVolume);
+  var standards = [600, 800, 1000, 1500, 1609, 3000, 5000, 10000];
+  var best = 600;
+  for (var i = 0; i < standards.length; i++) { if (standards[i] <= tt) best = standards[i]; }
+  return best;
+}
+function ttDistanceLabelFor(meters){
+  if (meters === 1609) return '1 mile';
+  if (meters >= 1000) return (meters/1000).toFixed(meters%1000===0?0:1) + ' km';
+  return meters + ' m';
+}
+
 function analyze(cfg){
   var curVdot=Vdot.fromRace(cfg.curDist,cfg.curTime);
   var targetVdot=Vdot.fromRace(cfg.goalDist,cfg.goalTime);
@@ -915,39 +890,7 @@ function analyze(cfg){
     noVolumeGrowth: cfg.peakKm <= cfg.currentKm * 1.05
   };
 }
-var DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-var DAY_FULL_NAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-function computeCaps(peakKm,goalDist){
-  var isMar = isMarathonDistance(goalDist);
-  var lMaxKm = isMar ? 35 : 30;
-  var lMaxMin = isMar ? 195 : 150;
-  var lCap;
-  if (isMar) {
-    if (peakKm >= 85) lCap = Math.min(35, Math.max(32, peakKm * 0.40));
-    else if (peakKm >= 70) lCap = Math.min(32, Math.max(30, peakKm * 0.46));
-    else if (peakKm >= 60) lCap = Math.min(30, peakKm * 0.46);
-    else lCap = Math.min(28, peakKm * 0.46);
-  } else {
-    lCap = Math.min(peakKm * 0.32, lMaxKm);
-  }
-  var lDurationCap = isMar && peakKm >= 70 ? lMaxMin : Math.min(lCap * 6.5, lMaxMin);
-  return {R:Math.min(peakKm*0.05,8),I:Math.min(peakKm*0.08,10),T:Math.min(peakKm*0.10,16),L:Math.round(lCap),Lmin:Math.round(Math.min(lCap*6.5,lDurationCap))};
-}
-function chooseTTDistance(goalDist, peakKm){
-  var goalTargets = {'800':1000,'1500':1500,'1609.344':1609,'3000':3000,'5000':5000,'10000':5000,'21097.5':10000,'42195':10000};
-  var target = goalTargets[String(goalDist)] || 5000;
-  var maxFromVolume = peakKm * 0.15 * 1000;
-  var tt = Math.min(target, maxFromVolume);
-  var standards = [600, 800, 1000, 1500, 1609, 3000, 5000, 10000];
-  var best = 600;
-  for (var i = 0; i < standards.length; i++) { if (standards[i] <= tt) best = standards[i]; }
-  return best;
-}
-function ttDistanceLabelFor(meters){
-  if (meters === 1609) return '1 mile';
-  if (meters >= 1000) return (meters/1000).toFixed(meters%1000===0?0:1) + ' km';
-  return meters + ' m';
-}
+
 function eRunKm(km,strides){
   return { zone:'E', title: km+' km E'+(strides?' + '+strides+' strides':''), totalKm: km, strides: strides || 0, detail: strides ? strides+' × 20 s light & quick' : '', isQ: false };
 }
@@ -967,7 +910,7 @@ function ttDay(distLabel,distM){
   var testKm=distM/1000;
   var totalKm=Math.round((testKm+3)*10)/10;
   return {zone:'tt',title:distLabel+' time trial',totalKm:totalKm,testDistanceKm:testKm,
-    detail:distLabel+' test at hard, even effort; total session distance includes warm-up and cool-down',isQ:true};
+    detail:distLabel+' test at hard, even effort',isQ:true};
 }
 function racePaceSimLong(peakKm, goalDist, variant){
   var isMar = isMarathonDistance(goalDist);
@@ -977,14 +920,14 @@ function racePaceSimLong(peakKm, goalDist, variant){
     totalA = Math.round(totalA);
     var mA = Math.round(totalA * 0.55);
     var eA = totalA - mA;
-    return {zone:'M',title:eA+' km E + '+mA+' km M',totalKm:totalA,detail:'Race rehearsal · practice fueling at current-fitness marathon pace',isQ:true,isSim:true,isLongRun:true};
+    return {zone:'M',title:eA+' km E + '+mA+' km M',totalKm:totalA,detail:'Race rehearsal · practice fueling',isQ:true,isSim:true,isLongRun:true};
   }
   var totalB = isMar ? (peakKm >= 85 ? Math.min(peakKm * 0.34, 30) : peakKm >= 70 ? Math.min(peakKm * 0.42, 30) : Math.min(peakKm * 0.40, 28)) : Math.min(peakKm * 0.26, 22);
   totalB = Math.round(totalB);
   var tB = Math.round(totalB * 0.20);
   var mB = Math.round(totalB * 0.45);
   var eB = totalB - mB - tB;
-  return {zone:'M',title:eB+' km E + '+mB+' km M + '+tB+' km T',totalKm:totalB,detail:'Race rehearsal at controlled current-fitness paces; not target pace unless validated',isQ:true,isSim:true,isLongRun:true};
+  return {zone:'M',title:eB+' km E + '+mB+' km M + '+tB+' km T',totalKm:totalB,detail:'Race rehearsal at current-fitness paces',isQ:true,isSim:true,isLongRun:true};
 }
 function rSession(caps,weeklyKm,v){
   var lim=caps.R,variant=v%4;
@@ -1012,6 +955,7 @@ function tSession(caps,weeklyKm,v){
   return {zone:'T',title:n+' × 1 km T + 4 × 200 R',totalKm:+(n+4).toFixed(1),detail:'1 min rests · finish w/ R 200s',isQ:true};
 }
 function goalPaceRehearsal(goalPaceSecPerKm){return {zone:'T',title:'3 × 2 km @ goal pace',totalKm:9,detail:'Target '+paceKm(goalPaceSecPerKm)+' · 3 min jogs',paceOverrideSecPerKm:goalPaceSecPerKm,isQ:true};}
+
 function padEasyRuns(days, weekLen, targetKm, longRunKm){
   if (weekLen < 5) return;
   var currentKm = 0;
@@ -1106,13 +1050,10 @@ function validateTrainingPlan(plan, cfg){
     refreshWeekTotals(w);
     if(w.totalKm>peak+0.01) issues.push({ruleId:'LOAD_MAX_WEEKLY_KM',severity:'error',week:w.number,observed:w.totalKm,expected:'<= '+peak});
     if(w.capResult && !w.capResult.passed) issues.push({ruleId:'LOAD_CAP_UNRESOLVED',severity:'error',week:w.number,observed:w.totalKm,expected:'<= '+(w.capResult.cap||peak)});
-    if(w.isCutback && w.number!==plan.weeks.length && w.number!==plan.bounds.phaseIVStart && w.totalKm>peak*0.9) issues.push({ruleId:'LOAD_CUTBACK_MAGNITUDE',severity:'warning',week:w.number,observed:w.totalKm,expected:'meaningful reduction from adjacent build weeks'});
-    if((w.isCutback || w.isModReduced) && w.number>1){var previousWeek=plan.weeks[w.number-2];if(previousWeek && previousWeek.totalKm>0 && w.totalKm>=previousWeek.totalKm*0.9) issues.push({ruleId:'RECOVERY_WEEK_NOT_REDUCED',severity:'warning',week:w.number,observed:w.totalKm,expected:'at least 10% below previous week actual training volume'});}
+    if((w.isCutback || w.isModReduced) && w.number>1){var previousWeek=plan.weeks[w.number-2];if(previousWeek && previousWeek.totalKm>0 && w.totalKm>=previousWeek.totalKm*0.9) issues.push({ruleId:'RECOVERY_WEEK_NOT_REDUCED',severity:'warning',week:w.number,observed:w.totalKm,expected:'at least 10% below previous week'});}
     if(w.isCutback){
       var cutbackLong=(w.days||[]).find(function(d){return d && d.isLongRun;});
       if(cutbackLong && cutbackLong.isSim) issues.push({ruleId:'RECOVERY_NO_RACE_REHEARSAL',severity:'error',week:w.number,observed:cutbackLong.title,expected:'easy long run only in recovery week'});
-      var prev=plan.weeks[w.number-2];
-      if(cutbackLong && prev){var prevLong=(prev.days||[]).find(function(d){return d && d.isLongRun;});if(prevLong && cutbackLong.totalKm>prevLong.totalKm*0.82) issues.push({ruleId:'RECOVERY_LONG_RUN_REDUCTION',severity:'warning',week:w.number,observed:cutbackLong.totalKm,expected:'<= 82% of previous long run'});}
     }
     var dates=computeWeekDates(cfg.startDate,w.number);
     var hard=[];
@@ -1145,7 +1086,7 @@ function generatePlan(cfg){
   var goalPaceSecPerKm=goalTime/(goalDist/1000);
   var currentMPaceSecPerKm=paces.M;
   var currentVdotForGap=cfg.currentVdot || paceVdot;
-  var targetVdotForGap=cfg.targetVdot || (typeof findVdotForRaceTime==='function' ? findVdotForRaceTime(goalTime,goalDist) : paceVdot);
+  var targetVdotForGap=cfg.targetVdot || paceVdot;
   var vdotGap=targetVdotForGap-currentVdotForGap;
   var paceGapSec=currentMPaceSecPerKm-goalPaceSecPerKm;
   var goalPaceValidated=(vdotGap<=1.5 && paceGapSec<=12);
@@ -1154,28 +1095,26 @@ function generatePlan(cfg){
   var ttWeek = Math.max(3, Math.round(weeks * 0.5));
   var boundsCheck = computePhaseBoundaries(weeks);
   if (weeks < 6){ ttWeek = null; }
-  else if (ttWeek >= boundsCheck.phaseIVStart){
-    ttWeek = Math.max(boundsCheck.II + 1, boundsCheck.phaseIVStart - 1);
-  }
+  else if (ttWeek >= boundsCheck.phaseIVStart){ ttWeek = Math.max(boundsCheck.II + 1, boundsCheck.phaseIVStart - 1); }
   var ttDistance = chooseTTDistance(goalDist, peakKm);
   var ttDistanceLabel = ttDistanceLabelFor(ttDistance);
-  var restWeekdays=cfg.restDays||new Set();
-  var longRunWeekday=cfg.longDay!==undefined?cfg.longDay:6;
+
+  // BUILD A CLONE OF REST DAYS and lock out the long-run day (UI already does this, defensive here)
+  var restWeekdays = new Set();
+  (cfg.restDays || []).forEach(function(d){ restWeekdays.add(d); });
+  var longRunWeekday = (cfg.longDay !== undefined) ? cfg.longDay : 6;
+  if (restWeekdays.has(longRunWeekday)) restWeekdays.delete(longRunWeekday);
+
+  // Log what we're generating so the console confirms the rest days in use
+  console.log('[PFC v28] Generating plan | weeks:', weeks, '| rest days:', Array.from(restWeekdays).map(function(d){return DAY_NAMES[d];}).join(', ') || 'NONE', '| long day:', DAY_FULL_NAMES[longRunWeekday]);
+
   var raceIdx=cfg.raceIdx;
   var out=[];
-
   var bounds = computePhaseBoundaries(weeks);
-  function phaseFor(w){
-    if (w <= bounds.I) return 'I';
-    if (w <= bounds.II) return 'II';
-    if (w < bounds.phaseIVStart) return 'III';
-    return 'IV';
-  }
+  function phaseFor(w){ if (w <= bounds.I) return 'I'; if (w <= bounds.II) return 'II'; if (w < bounds.phaseIVStart) return 'III'; return 'IV'; }
   var startVol=Math.min(currentKm,peakKm*0.75);
   var buildEnd = bounds.II;
-  var simWeeks = isMar
-    ? [weeks-6, weeks-4].filter(function(w){ return w > bounds.II && w < bounds.phaseIVStart; })
-    : [];
+  var simWeeks = isMar ? [weeks-6, weeks-4].filter(function(w){ return w > bounds.II && w < bounds.phaseIVStart; }) : [];
   var midBlockCutbackWeek = null;
   if (weeks >= 12){
     var candidate = Math.round((bounds.II + bounds.phaseIVStart) / 2);
@@ -1188,6 +1127,8 @@ function generatePlan(cfg){
     midBlockCutbackWeek = candidate;
   }
   var longBuildEnd = isMar ? Math.max(bounds.phaseIVStart - 1, buildEnd) : buildEnd;
+
+  var forcedRestCount = 0;
 
   for(var w=1;w<=weeks;w++){
     var weekVol;
@@ -1204,7 +1145,6 @@ function generatePlan(cfg){
 
     var days=new Array(7).fill(null);
     var isRaceWeek=(w===weeks);
-    var isTaperWeek=false;
     var isTTWeek=(ttWeek !== null && w===ttWeek);
     var isSimWeek=(simWeeks.indexOf(w)>=0 && !isCutback);
     var phase=phaseFor(w);
@@ -1245,6 +1185,7 @@ function generatePlan(cfg){
         longRunRef = days[longDayIdx] ? days[longDayIdx].totalKm : null;
       }
       var q1,q2,q3;
+      // Phase I: E only with strides (Daniels p. 155). No R sessions here.
       if(phase==='I'){q1=eRunKm(Math.max(6,Math.round(weekVol*0.18)),10);q2=eRunKm(Math.max(5,Math.round(weekVol*0.16)),8);q3=eRunKm(Math.max(5,Math.round(weekVol*0.14)),6);}
       else if(phase==='II'){q1=rSession(weekCaps,weekVol,w);q2=tSession(weekCaps,weekVol,w);q3=eRunKm(Math.max(6,Math.round(weekVol*0.15)),8);}
       else if(phase==='III'){
@@ -1315,6 +1256,23 @@ function generatePlan(cfg){
       }
       if (!isRaceWeek && !isCutback){ padEasyRuns(days, weekLen, weekVol, longRunRef); }
     }
+
+    // === HARD ENFORCEMENT ===
+    // Belt-and-suspenders: force rest on any rest-weekday that still has a workout.
+    // Never overrides the race day or the locked long-run day.
+    for (var di = 0; di < weekLen; di++){
+      if (isRaceWeek && di === raceIdx) continue;
+      if (di === longDayIdx) continue;
+      var dayObj = days[di];
+      if (!dayObj) continue;
+      if (dayObj.zone === 'rest' || dayObj.zone === 'race') continue;
+      if (restWeekdays.has(weekDates[di].getDay())){
+        console.warn('[PFC v28] Forcing rest on week '+w+' day '+di+' ('+DAY_NAMES[weekDates[di].getDay()]+') — was: '+dayObj.title);
+        days[di] = restDay();
+        forcedRestCount++;
+      }
+    }
+
     while(days.length<7){days.push(null);}
     var preCapKm=0; for(var pc=0;pc<days.length;pc++){if(days[pc] && days[pc].zone!=='race' && isFinite(days[pc].totalKm)) preCapKm+=days[pc].totalKm;}
     var weekRecord={number:w,days:days,totalKm:preCapKm}; weekRecord._preCapKm=preCapKm;
@@ -1335,9 +1293,16 @@ function generatePlan(cfg){
     totalKm=Math.round(totalKm*10)/10;
     out.push({
       number:w, phase:phase, totalKm:totalKm, trainingKm:totalKm, raceKm:Math.round(raceKm*1000)/1000,
-      totalRunningKm:Math.round((totalKm+raceKm)*10)/10, days:days, paces:pac
+      totalRunningKm:Math.round((totalKm+raceKm)*10)/10, days:days, paces:pac,
+      isTT:isTTWeek, isSim:isSimWeek, isCutback:isCutback, isModReduced:isModReduced,
+      capResult:capResult, startDate:cfg.startDate, weekLen:weekLen
     });
   }
+
+  if (forcedRestCount > 0){
+    console.warn('[PFC v28] Defensive rest-day enforcement corrected '+forcedRestCount+' workouts that slipped through.');
+  }
+
   for(var li=1;li<out.length;li++){
     var priorLong=(out[li-1].days||[]).find(function(d){return d && d.isLongRun;});
     var nextLong=(out[li].days||[]).find(function(d){return d && d.isLongRun;});
@@ -1351,8 +1316,14 @@ function generatePlan(cfg){
       out[li-1].capResult=enforceWeeklyMileageCap(out[li-1],peakKm,false,peakKm);
     }
   }
+
+  // Build a validation-cfg that uses the CLEANED rest-day set (long day removed)
+  var cleanRestSet = new Set();
+  restWeekdays.forEach(function(d){ cleanRestSet.add(d); });
+  var validationCfg = Object.assign({}, cfg, { restDays: cleanRestSet });
+
   var result={weeks:out,caps:caps,paces:pac,rehearsalNeeded:rehearsalNeeded,ttWeek:ttWeek,ttDistance:ttDistance,ttDistanceLabel:ttDistanceLabel,startDate:cfg.startDate,bounds:bounds};
-  result.validation=validateTrainingPlan(result,cfg);
+  result.validation=validateTrainingPlan(result,validationCfg);
   return result;
 }
 
@@ -1375,12 +1346,12 @@ function beginnerSessionFromSpec(spec){
   if (spec === 'walk30') return {zone:'walk',title:'30 min walk',detail:'Easy conversational pace',totalMin:30,isQ:false};
   if (spec === 'walk35') return {zone:'walk',title:'35 min walk',detail:'Easy conversational pace',totalMin:35,isQ:false};
   if (spec === 'walk40') return {zone:'walk',title:'40 min walk',detail:'Easy conversational pace',totalMin:40,isQ:false};
-  if (spec === 'run10') return {zone:'E',title:'10 min continuous run',detail:'Easy — you should be able to talk while running',totalMin:15,isQ:false};
-  if (spec === 'run12') return {zone:'E',title:'12 min continuous run',detail:'Easy — you should be able to talk while running',totalMin:17,isQ:false};
-  if (spec === 'run15') return {zone:'E',title:'15 min continuous run',detail:'Easy — you should be able to talk while running',totalMin:20,isQ:false};
-  if (spec === 'run20') return {zone:'E',title:'20 min continuous run',detail:'Easy — you should be able to talk while running',totalMin:25,isQ:false};
-  if (spec === 'run25') return {zone:'E',title:'25 min continuous run',detail:'Easy — you should be able to talk while running',totalMin:30,isQ:false};
-  if (spec === 'run30') return {zone:'E',title:'30 min continuous run',detail:'Easy — you should be able to talk while running',totalMin:35,isQ:false};
+  if (spec === 'run10') return {zone:'E',title:'10 min continuous run',detail:'Easy — you should be able to talk',totalMin:15,isQ:false};
+  if (spec === 'run12') return {zone:'E',title:'12 min continuous run',detail:'Easy — you should be able to talk',totalMin:17,isQ:false};
+  if (spec === 'run15') return {zone:'E',title:'15 min continuous run',detail:'Easy — you should be able to talk',totalMin:20,isQ:false};
+  if (spec === 'run20') return {zone:'E',title:'20 min continuous run',detail:'Easy — you should be able to talk',totalMin:25,isQ:false};
+  if (spec === 'run25') return {zone:'E',title:'25 min continuous run',detail:'Easy — you should be able to talk',totalMin:30,isQ:false};
+  if (spec === 'run30') return {zone:'E',title:'30 min continuous run',detail:'Easy — you should be able to talk',totalMin:35,isQ:false};
   if (spec === 'RACE') return {zone:'race',title:'★ Race day',detail:'Your goal event. Have fun.',totalMin:0,isQ:false};
   var m = spec.match(/^rw_(\d+)_(\d+)_x(\d+)$/);
   if (m){
@@ -1393,7 +1364,9 @@ function beginnerSessionFromSpec(spec){
 function generateBeginnerPlan(cfg){
   var weeks = cfg.weeks;
   var longRunWeekday = cfg.longDay;
-  var restWeekdays = cfg.restDays || new Set();
+  var restWeekdays = new Set();
+  (cfg.restDays || []).forEach(function(d){ restWeekdays.add(d); });
+  if (restWeekdays.has(longRunWeekday)) restWeekdays.delete(longRunWeekday);
   var raceIdx = cfg.raceIdx;
   var out = [];
   var startIdx = 0;
@@ -1435,6 +1408,17 @@ function generateBeginnerPlan(cfg){
       if (medIdx !== undefined && medIdx !== shortIdx) days[medIdx] = beginnerSessionFromSpec(medSpec);
       if (longIdx >= 0 && longIdx !== shortIdx && longIdx !== medIdx) days[longIdx] = beginnerSessionFromSpec(longSpec);
     }
+    // Hard enforcement
+    for (var di = 0; di < weekLen; di++){
+      if (isRaceWeek && di === thisRaceIdx) continue;
+      if (di === longIdx && !isRaceWeek) continue;
+      var dObj = days[di];
+      if (!dObj) continue;
+      if (dObj.zone === 'rest' || dObj.zone === 'race') continue;
+      if (restWeekdays.has(weekDates[di].getDay())){
+        days[di] = restDay();
+      }
+    }
     for (var i = 0; i < weekLen; i++){ if (!days[i]) days[i] = restDay(); }
     while (days.length < 7) days.push(null);
     var totalMin = 0;
@@ -1448,6 +1432,7 @@ function generateBeginnerPlan(cfg){
   }
   return { weeks: out, startDate: cfg.startDate, isBeginner: true };
 }
+
 function purposeFor(day, isBeginner){
   if (!day) return '';
   if (day.isBeginner) {
@@ -1470,7 +1455,7 @@ function purposeFor(day, isBeginner){
   if(z==='rest')return 'Adaptation happens here — repair, glycogen, hormones.';
   if(z==='race')return 'The payoff. Execution matters more than any workout.';
   if(z==='tt')return 'Fitness checkpoint — verifies VDOT, recalibrates the plan.';
-  if(day.isSim)return 'Race rehearsal. Practice fueling and pacing at current-fitness marathon pace; target pace is separate.';
+  if(day.isSim)return 'Race rehearsal. Practice fueling and pacing at current-fitness marathon pace.';
   if(z==='E'){
     if(t.indexOf('strides')>=0)return 'Base + leg speed. Strides sharpen turnover without fatigue.';
     if(t.indexOf('long')>=0)return 'Aerobic & muscular endurance — confidence for race distance.';
@@ -1509,16 +1494,8 @@ function renderVerdict(a,userName,cfg){
     var curDistName = RACE_META[String(cfg.curDist)] ? RACE_META[String(cfg.curDist)].name : 'recent race';
     html+='<div class="verdict-banner green"><div class="icon">🎯</div><div class="body">';
     html+='<div class="label">Good news, '+safeName+'</div><div class="title">You can aim higher than this goal</div>';
-    html+='<div class="desc">Your recent '+curDistName+' of <strong>'+fmtTime(cfg.curTime)+'</strong> predicts a '+distName+' of <strong>'+fmtTime(a.currentGoalTime)+'</strong> — that\'s about <strong>'+gapStr+' faster</strong> than your goal of '+fmtTime(a.goalTime)+'. You\'re already capable of beating this goal by a comfortable margin.<br><br>Want to <strong>keep training for '+fmtTime(a.goalTime)+'</strong> anyway, or <strong>aim higher</strong> at '+fmtTime(a.suggestedGoalTime)+'?</div>';
+    html+='<div class="desc">Your recent '+curDistName+' of <strong>'+fmtTime(cfg.curTime)+'</strong> predicts a '+distName+' of <strong>'+fmtTime(a.currentGoalTime)+'</strong> — that\'s about <strong>'+gapStr+' faster</strong> than your goal of '+fmtTime(a.goalTime)+'.<br><br>Want to <strong>keep training for '+fmtTime(a.goalTime)+'</strong> anyway, or <strong>aim higher</strong> at '+fmtTime(a.suggestedGoalTime)+'?</div>';
     html+='<div class="goal-actions"><button class="btn" id="keepGoalBtn">Keep my goal '+fmtTime(a.goalTime)+'</button><button class="btn primary" id="useFasterBtn">Aim for '+fmtTime(a.suggestedGoalTime)+' →</button></div>';
-    html+='</div></div>';
-    html+='<div class="card"><h2>Forecast</h2><div class="check-grid">';
-    html+=checkItem('Weeks available',a.weeks+' wk','Minimum guidance: '+(cfg.minimumWeeks||'—')+' wk · recommended: '+(cfg.recommendedWeeks||'—')+' wk',a.weeks>=(cfg.minimumWeeks||10)?'pass':'warn');
-    html+=checkItem('Goal',fmtTime(a.goalTime),'Easier than your current ability','pass');
-    html+=checkItem('Your current ability',fmtTime(a.currentGoalTime),'Based on your recent '+curDistName,'pass');
-    html+=checkItem('Suggested goal',fmtTime(a.suggestedGoalTime),'A realistic target to aim for','pass');
-    html+=checkItem('Calculated peak',a.peakKm+' km/week',a.volOk?'Derived from current load, goal and available weeks':'Calculated build remains below the typical volume estimate',a.volOk?'pass':'warn');
-    html+=checkItem('Peak long run','~'+Math.round(a.targetLongMin)+' min target',a.planCanReachLongRun?'Plan builds to this duration':'Long-run duration is constrained by current load and available build time',a.planCanReachLongRun?'pass':'warn');
     html+='</div></div>';
     return html;
   }
@@ -1526,30 +1503,16 @@ function renderVerdict(a,userName,cfg){
   var icon={green:'✓',amber:'⚠',red:'⚠'};
   var intro;
   if (a.severity === 'red') {
-    intro = safeName+', the current model estimates a finish around <strong>'+fmtTime(a.predictedTime)+'</strong> from your current fitness, available weeks and planned volume. This is a simplified planning estimate, not a guarantee. The goal of '+fmtTime(a.goalTime)+' requires a <strong>+'+a.vdotGap.toFixed(1)+'-VDOT jump</strong>, compared with an estimated training gain of about '+a.achievableGain.toFixed(1)+' points. <strong>You decide.</strong> We\'ll build for your race date and reassess at the time trial.';
+    intro = safeName+', the current model estimates a finish around <strong>'+fmtTime(a.predictedTime)+'</strong>. This is a planning estimate, not a guarantee. The goal of '+fmtTime(a.goalTime)+' requires a <strong>+'+a.vdotGap.toFixed(1)+'-VDOT jump</strong>, compared with an estimated training gain of about '+a.achievableGain.toFixed(1)+' points. <strong>You decide.</strong>';
   } else if (a.severity === 'amber') {
-    intro = safeName+', this is an <strong>ambitious</strong> goal for the time and volume you have. We build the plan for the race date anyway. At Week '+(a.ttWeekText||'the midpoint')+' you\'ll run a time trial — if your fitness then supports this goal, we continue as planned. If not, we\'ll suggest a revised goal. <strong>You decide.</strong>';
+    intro = safeName+', this is an <strong>ambitious</strong> goal for the time and volume you have. We build for the race date anyway. At Week '+(a.ttWeekText||'the midpoint')+' you\'ll run a time trial — if fitness then supports this goal, we continue. <strong>You decide.</strong>';
   } else {
     intro = safeName+', your inputs are compatible with this goal. Race date is locked — we build for it and check fitness at the mid-block time trial.';
   }
   html+='<div class="verdict-banner '+a.severity+'"><div class="icon">'+icon[a.severity]+'</div><div class="body"><div class="label">Goal outlook</div><div class="title">'+cfgLabel[a.severity]+'</div><div class="desc">'+intro+'</div></div></div>';
-  html+='<div class="card"><h2>Forecast</h2><div class="check-grid">';
-  html+=checkItem('Weeks available',a.weeks+' wk','Minimum guidance: '+(cfg.minimumWeeks||'—')+' wk · recommended: '+(cfg.recommendedWeeks||'—')+' wk',a.weeks>=(cfg.minimumWeeks||10)?'pass':'warn');
-  var goalDisplay, goalDetail, goalStatus;
-  if (a.vdotGap < 0) { goalDisplay = 'Headroom'; goalDetail = 'Goal is easier than current fitness'; goalStatus = 'pass'; }
-  else if (a.vdotGap < 0.5) { goalDisplay = 'At current level'; goalDetail = 'Goal matches current ability'; goalStatus = 'pass'; }
-  else { goalDisplay = '+'+a.vdotGap.toFixed(1)+' VDOT'; goalDetail = 'Requires '+a.targetVdot.toFixed(1)+' at race day'; goalStatus = a.vdotFeasible?'pass':(a.severity==='amber'?'warn':'fail'); }
-  html+=checkItem('Goal',goalDisplay,goalDetail,goalStatus);
-  html+=checkItem('Modelled at race',fmtTime(a.predictedTime),'Simplified planning estimate, not a guarantee',(a.vdotGap<=1?'pass':(a.severity==='amber'?'warn':'fail')));
-  html+=checkItem('Calculated peak',a.peakKm+' km/week',a.volOk?'Derived from current load, goal and available weeks':'Calculated build remains below the typical volume estimate',a.volOk?'pass':'warn');
-  html+=checkItem('Peak long run','~'+Math.round(a.targetLongMin)+' min target',a.planCanReachLongRun?'Plan builds to this duration':'Long-run duration is constrained by current load and available build time',a.planCanReachLongRun?'pass':'warn');
-  if (a.noVolumeGrowth){
-    html+=checkItem('Volume growth','Limited','Current training load is already near the calculated ceiling for this timeline.',(a.severity==='red'?'fail':'warn'));
-  }
-  html+='</div></div>';
   return html;
 }
-function checkItem(name,value,detail,cls){return '<div class="check '+cls+'"><div class="check-name">'+name+'</div><div class="check-value">'+value+'</div><div class="check-detail">'+detail+'</div></div>';}
+
 function paceRow(zone,name,primary,secondary){
   return '<div class="pace-row"><span class="zone-badge z-'+zone+'">'+zone+'</span><div><div class="pace-name">'+name+'</div><div class="pace-values"><span class="primary">'+primary+'</span>'+(secondary?'<span class="secondary">'+secondary+'</span>':'')+'</div></div></div>';
 }
@@ -1567,9 +1530,9 @@ function renderPaceSummary(paces, goalDist){
 }
 function renderBeginnerLegend(){
   return '<h2 style="margin-top:14px">Session types</h2>'+
-    '<div class="pace-row"><span class="zone-badge z-walk">W</span><div><div class="pace-name">Walk</div><div class="pace-values"><span class="primary">Easy conversational pace</span><span class="secondary">Just moving</span></div></div></div>'+
-    '<div class="pace-row"><span class="zone-badge z-runwalk">R/W</span><div><div class="pace-name">Run/walk</div><div class="pace-values"><span class="primary">Alternating intervals</span><span class="secondary">By time</span></div></div></div>'+
-    '<div class="pace-row"><span class="zone-badge z-E">E</span><div><div class="pace-name">Continuous run</div><div class="pace-values"><span class="primary">Easy, conversational</span><span class="secondary">Able to talk</span></div></div></div>';
+    '<div class="pace-row"><span class="zone-badge z-walk">W</span><div><div class="pace-name">Walk</div><div class="pace-values"><span class="primary">Easy conversational pace</span></div></div></div>'+
+    '<div class="pace-row"><span class="zone-badge z-runwalk">R/W</span><div><div class="pace-name">Run/walk</div><div class="pace-values"><span class="primary">Alternating intervals</span></div></div></div>'+
+    '<div class="pace-row"><span class="zone-badge z-E">E</span><div><div class="pace-name">Continuous run</div><div class="pace-values"><span class="primary">Easy, conversational</span></div></div></div>';
 }
 function renderWeek(w,startDate){
   var dates=computeWeekDates(startDate,w.number);
@@ -1644,7 +1607,7 @@ function weekWhy(w){
     return 'Race preparation and taper. You are ready.';
   }
   var p2=w.phase;
-  if(w.isCutback) return 'Recovery week — reduced volume to absorb the previous block\'s training.';
+  if(w.isCutback) return 'Recovery week — reduced volume to absorb the previous block.';
   if(w.isSim)return 'Race-pace simulation week — long run combines E and M-pace blocks.';
   if(p2==='I')return 'Aerobic base, injury resistance, and neuromuscular priming through strides.';
   if(p2==='II')return 'Repetition work sharpens speed and economy; T sessions build lactate clearance.';
@@ -1681,11 +1644,12 @@ function renderPlan(result,meta,userName){
   if (!isBeginner){
     html+='<div class="print-info-item"><div class="pi-label">Peak weekly (actual plan)</div><div class="pi-value">'+peakKm.toFixed(1).replace(/\.0$/,'')+' km</div></div>';
   }
-    html+='<div class="print-info-item"><div class="pi-label">Long run day</div><div class="pi-value">'+meta.longRunDay+'</div></div>';
-  if (!isBeginner){
-    html+='<div class="print-info-item"><div class="pi-label">Rest days</div><div class="pi-value">'+(meta.restDaysStr||'None')+'</div></div>';
-  }
+  html+='<div class="print-info-item"><div class="pi-label">Long run day</div><div class="pi-value">'+meta.longRunDay+'</div></div>';
+  html+='<div class="print-info-item"><div class="pi-label">Rest days</div><div class="pi-value">'+(meta.restDaysStr||'None')+'</div></div>';
   html+='</div></div>';
+  if(!isBeginner && meta.goalOutlookTitle && meta.goalOutlookDetail){
+    html+='<div class="verdict-banner '+escapeHtml(meta.goalSeverity||'amber')+' plan-goal-note"><div class="body"><div class="label">Goal outlook</div><div class="title">'+escapeHtml(meta.goalOutlookTitle)+'</div><div class="desc">'+escapeHtml(meta.goalOutlookDetail)+'</div></div></div>';
+  }
   if (!isBeginner && result.validation && result.validation.issues && result.validation.issues.length > 0){
     var errs = result.validation.issues.filter(function(i){return i.severity==='error';});
     if (errs.length > 0){
@@ -1696,16 +1660,13 @@ function renderPlan(result,meta,userName){
       html+='</ul></div>';
     }
   }
-  if(!isBeginner && meta.goalOutlookTitle && meta.goalOutlookDetail){
-    html+='<div class="verdict-banner '+escapeHtml(meta.goalSeverity||'amber')+' plan-goal-note"><div class="body"><div class="label">Goal outlook</div><div class="title">'+escapeHtml(meta.goalOutlookTitle)+'</div><div class="desc">'+escapeHtml(meta.goalOutlookDetail)+'</div></div></div>';
-  }
   if (isBeginner) html+=renderBeginnerLegend();
   else html+=renderPaceSummary(paces, meta.goalDist);
   html+='</div>';
   if (!isBeginner && result.ttWeek){
     html+='<div class="recal-panel no-print" id="recalPanel">';
     html+='<h3>Mid-block time trial — Week '+result.ttWeek+'</h3>';
-    html+='<p>Week '+result.ttWeek+' includes a <strong>'+result.ttDistanceLabel+' time trial</strong>. Warm up, run the test distance hard and evenly, then cool down. The distance shown on the workout card includes warm-up and cool-down. Enter only the test result below and we\'ll re-check your fitness.</p>';
+    html+='<p>Week '+result.ttWeek+' includes a <strong>'+result.ttDistanceLabel+' time trial</strong>. Warm up, run the test distance hard and evenly, then cool down. Enter only the test result below.</p>';
     html+='<div class="recal-row">';
     html+='<div class="field"><label>Distance</label><select id="ttDistance">'+ttSelectOptions(result.ttDistance)+'</select></div>';
     html+='<div class="field"><label>Time</label><div class="time-input"><input type="tel" id="ttTimeH" maxlength="2" placeholder="00" inputmode="numeric"><span class="sep">:</span><input type="tel" id="ttTimeM" maxlength="2" placeholder="00" inputmode="numeric"><span class="sep">:</span><input type="tel" id="ttTimeS" maxlength="2" placeholder="00" inputmode="numeric"></div></div>';
@@ -1722,12 +1683,19 @@ function ttSelectOptions(selectedMeters){
   return html;
 }
 
-var state={analysis:null,plan:null,planOriginal:null,planMeta:null,cfg:null,allRestDays:new Set(),longDay:6,currentVdotOverride:null,userName:'',originalGoalTime:null,adjustedGoalTime:null,feelMode:null,feelDays:0,feelStartDate:null,planType:'standard',beginnerRestDays:new Set(),beginnerLongDay:6};
+var state={
+  analysis:null, plan:null, planOriginal:null, planMeta:null, cfg:null,
+  allRestDays:new Set(), longDay:6,
+  beginnerRestDays:new Set(), beginnerLongDay:6,
+  currentVdotOverride:null, userName:'',
+  originalGoalTime:null, adjustedGoalTime:null,
+  feelMode:null, feelDays:0, feelStartDate:null,
+  planType:'standard'
+};
 
 function minimumPlanWeeks(goalDist,currentKm,experience){
   var base=({'5000':6,'10000':8,'21097.5':10,'42195':14})[String(goalDist)]||8;
-  if(currentKm<15) base+=4;
-  else if(currentKm<30) base+=2;
+  if(currentKm<15) base+=4; else if(currentKm<30) base+=2;
   if(experience==='returning') base+=3;
   else if(experience==='experienced') base=Math.max(6,base-1);
   return base;
@@ -1761,9 +1729,8 @@ function setStartDateForDuration(which){
   race.setDate(race.getDate()-backToMonday);
   var yyyy=race.getFullYear(),mm=String(race.getMonth()+1).padStart(2,'0'),dd=String(race.getDate()).padStart(2,'0');
   document.getElementById('startDate').value=yyyy+'-'+mm+'-'+dd;
-  updateInputState();
+  updateInputState(); scheduleRegenerate();
 }
-
 function updateDurationGuidance(){
   var el=document.getElementById('durationGuidance');
   if(!el)return;
@@ -1773,11 +1740,10 @@ function updateDurationGuidance(){
   var weeks=computeWeeks(document.getElementById('startDate').value||'',document.getElementById('raceDate').value||'');
   if(!goal||!current||!weeks){el.textContent='Choose race distance, current mileage and dates';el.className='computed-box empty';return;}
   var minW=minimumPlanWeeks(goal,current,exp), recW=recommendedPlanWeeks(goal,current,exp);
-  var msg=weeks<minW?'Short: '+weeks+' weeks · minimum guidance '+minW+' weeks':(weeks<recW?'Minimum met: '+weeks+' weeks · recommended '+recW+' weeks':'Good runway: '+weeks+' weeks · recommended '+recW+' weeks');
+  var msg=weeks<minW?'Short: '+weeks+' weeks · minimum '+minW+' weeks':(weeks<recW?'Minimum met: '+weeks+' weeks · recommended '+recW+' weeks':'Good runway: '+weeks+' weeks · recommended '+recW+' weeks');
   el.textContent=msg;
   el.className='computed-box'+(weeks<minW?' empty':'');
 }
-
 function readCfgStandard(){
   var rawCur=document.getElementById('currentKm').value;
   var curDist=parseFloat(document.getElementById('curDist').value) || 0;
@@ -1799,7 +1765,8 @@ function readCfgStandard(){
     currentKm:rawCur===''?0:parseFloat(rawCur),
     goalDist:goalDist, goalTime:goalTimeRes.seconds,
     goalTimeEmpty:goalTimeRes.empty, goalTimeInvalid:goalTimeRes.invalid,
-    peakKm:calculatedPeak, experienceLevel:experienceLevel, minimumWeeks:minimumPlanWeeks(goalDist,rawCur===''?0:parseFloat(rawCur),experienceLevel),
+    peakKm:calculatedPeak, experienceLevel:experienceLevel,
+    minimumWeeks:minimumPlanWeeks(goalDist,rawCur===''?0:parseFloat(rawCur),experienceLevel),
     recommendedWeeks:recommendedPlanWeeks(goalDist,rawCur===''?0:parseFloat(rawCur),experienceLevel),
     restDays:state.allRestDays
   };
@@ -1828,9 +1795,9 @@ function validateStandard(cfg){
   if(!cfg.startDate){missing.push('start date');markInvalid('field-startDate');}
   if(!cfg.raceDate){missing.push('race date');markInvalid('field-raceDate');}
   var weeks=computeWeeks(cfg.startDate,cfg.raceDate);
-  if(cfg.startDate&&cfg.raceDate&&(!weeks||weeks<2)){missing.push('race date at least 2 weeks after start');markInvalid('field-raceDate');}
+  if(cfg.startDate&&cfg.raceDate&&(!weeks||weeks<2)){missing.push('race date ≥2 weeks after start');markInvalid('field-raceDate');}
   if(!cfg.curDist||isNaN(cfg.curDist)){missing.push('recent race distance');markInvalid('field-curDist');}
-  if(cfg.curTimeInvalid){missing.push('valid race time (min and sec 0–59)');markInvalid('field-curTime');}
+  if(cfg.curTimeInvalid){missing.push('valid race time');markInvalid('field-curTime');}
   else if(!cfg.curTime){missing.push('recent race time');markInvalid('field-curTime');}
   else {
     var check1 = validateRaceInput(cfg.curDist, cfg.curTime);
@@ -1838,7 +1805,7 @@ function validateStandard(cfg){
   }
   if(!cfg.currentKm||cfg.currentKm<=0){missing.push('current weekly km');markInvalid('field-currentKm');}
   if(!cfg.goalDist||isNaN(cfg.goalDist)){missing.push('goal distance');markInvalid('field-goalDist');}
-  if(cfg.goalTimeInvalid){missing.push('valid goal time (min and sec 0–59)');markInvalid('field-goalTime');}
+  if(cfg.goalTimeInvalid){missing.push('valid goal time');markInvalid('field-goalTime');}
   else if(!cfg.goalTime){missing.push('goal time');markInvalid('field-goalTime');}
   else {
     var check2 = validateRaceInput(cfg.goalDist, cfg.goalTime);
@@ -1854,7 +1821,7 @@ function validateBeginner(cfg){
   if(!cfg.startDate){missing.push('start date');markInvalid('field-bStartDate');}
   if(!cfg.raceDate){missing.push('race day');markInvalid('field-bRaceDate');}
   var weeks=computeWeeks(cfg.startDate,cfg.raceDate);
-  if(cfg.startDate&&cfg.raceDate&&(!weeks||weeks<4)){missing.push('race day at least 4 weeks after start');markInvalid('field-bRaceDate');}
+  if(cfg.startDate&&cfg.raceDate&&(!weeks||weeks<4)){missing.push('race day ≥4 weeks after start');markInvalid('field-bRaceDate');}
   if(!cfg.ability){missing.push('current ability');markInvalid('field-bAbility');}
   if(!cfg.goal){missing.push('goal');markInvalid('field-bGoal');}
   return missing;
@@ -1891,7 +1858,6 @@ function updateInputState(){
   if(missing.length===0){btn.disabled=false;btn.textContent='Analyze & generate plan →';status.className='input-status ready';status.textContent='All inputs received — ready to generate.';}
   else {btn.disabled=true;btn.textContent='Fill all fields →';status.className='input-status missing';status.textContent='Still needed: '+missing.join(', ')+'.';}
 }
-function runAnalysis(){ if (state.planType === 'beginner'){ runBeginnerAnalysis(); } else { runStandardAnalysis(); } }
 
 var regenTimer = null;
 function scheduleRegenerate(){
@@ -1906,6 +1872,13 @@ function scheduleRegenerate(){
     else runBeginnerAnalysis(true);
   }, 400);
 }
+
+function onAnyInput(){
+  updateInputState();
+  scheduleRegenerate();
+}
+
+function runAnalysis(){ if (state.planType === 'beginner'){ runBeginnerAnalysis(false); } else { runStandardAnalysis(false); } }
 
 function runStandardAnalysis(silent){
   var cfg=readCfgStandard();
@@ -1929,8 +1902,8 @@ function runStandardAnalysis(silent){
   if(keepBtn)keepBtn.addEventListener('click',function(){ document.getElementById('verdict').innerHTML=''; });
   if(useFasterBtn)useFasterBtn.addEventListener('click',function(){
     writeTimeField('goalTime', a.suggestedGoalTime);
-    updateInputState();
-    runStandardAnalysis();
+    onAnyInput();
+    runStandardAnalysis(false);
   });
   var raceDateObj=parseLocalDate(cfg.raceDate); var startDateObj=parseLocalDate(cfg.startDate);
   state.planMeta={
@@ -1940,26 +1913,23 @@ function runStandardAnalysis(silent){
     currentVdot:a.currentVdot, targetVdot:a.targetVdot,
     currentAbilityStr:fmtTime(findRaceTime(a.currentVdot,cfg.goalDist)),
     raceDateStr:fmtDateLong(raceDateObj), firstDayStr:fmtDateLong(startDateObj),
-        peakKm:cfg.peakKm, longRunDay:DAY_FULL_NAMES[cfg.longDay],
-    restDaysStr: (function(){
-      var arr = [];
-      state.allRestDays.forEach(function(d){ arr.push(d); });
-      arr.sort(function(a,b){return a-b;});
-      return arr.length > 0 ? arr.map(function(d){ return DAY_NAMES[d]; }).join(', ') : 'None';
-    })(),
+    peakKm:cfg.peakKm, longRunDay:DAY_FULL_NAMES[cfg.longDay],
+    restDaysStr: formatRestDays(state.allRestDays),
     goalDist:cfg.goalDist,
     goalSeverity:a.severity,
     goalOutlookTitle:({green:'Goal compatible with current fitness estimate',amber:'Ambitious goal — reassess at the time trial',red:'Stretch goal — current fitness is far from target'})[a.severity],
-    goalOutlookDetail:(a.goalIsEasier ? 'Current-fitness estimate: '+fmtTime(a.currentGoalTime)+'. Goal: '+fmtTime(cfg.goalTime)+'. The target is easier than the current estimate; keep the goal if you prefer a conservative race.' : 'Current-fitness estimate: '+fmtTime(a.currentGoalTime)+'. Goal: '+fmtTime(cfg.goalTime)+'. Target gap: '+(a.vdotGap>=0?'+':'')+a.vdotGap.toFixed(1)+' VDOT; modelled training gain: about '+a.achievableGain.toFixed(1)+' points. The race-time forecast is a heuristic, not a guarantee. Reassess after the Week '+(state.plan.ttWeek||'mid-plan')+' time trial.')
+    goalOutlookDetail:(a.goalIsEasier ? 'Current-fitness estimate: '+fmtTime(a.currentGoalTime)+'. Goal: '+fmtTime(cfg.goalTime)+'. Target is easier than the current estimate.' : 'Current-fitness estimate: '+fmtTime(a.currentGoalTime)+'. Goal: '+fmtTime(cfg.goalTime)+'. Target gap: '+(a.vdotGap>=0?'+':'')+a.vdotGap.toFixed(1)+' VDOT; modelled training gain: about '+a.achievableGain.toFixed(1)+' points. Reassess after the Week '+(state.plan.ttWeek||'mid-plan')+' time trial.')
   };
   document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
   if (state.plan.ttWeek){
     document.getElementById('recalBtn').addEventListener('click',handleRecalibrate);
     setupTimeField('ttTime');
   }
-    updateFeelNote();
+  updateFeelNote();
+  document.getElementById('regenNote').style.display='block';
   if (!silent) document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
 }
+
 function runBeginnerAnalysis(silent){
   var cfg = readCfgBeginner();
   var missing = validateBeginner(cfg);
@@ -1981,19 +1951,22 @@ function runBeginnerAnalysis(silent){
     goalTimeStr: '', subtitle: 'Build from walking and run/walk intervals to continuous running · '+weeks+' weeks',
     startingLevel: cfg.abilityLabel, daysPerWeek: cfg.daysPerWeek,
     raceDateStr: fmtDateLong(raceDateObj), firstDayStr: fmtDateLong(startDateObj),
-    longRunDay: DAY_FULL_NAMES[cfg.longDay], peakKm: 0
+    longRunDay: DAY_FULL_NAMES[cfg.longDay], peakKm: 0,
+    restDaysStr: formatRestDays(state.beginnerRestDays)
   };
-    document.getElementById('plan').innerHTML = renderPlan(planResult, state.planMeta, state.userName);
+  document.getElementById('plan').innerHTML = renderPlan(planResult, state.planMeta, state.userName);
   updateFeelNote();
+  document.getElementById('regenNote').style.display='block';
   if (!silent) document.getElementById('plan').scrollIntoView({behavior:'smooth',block:'start'});
 }
+
 function handleRecalibrate(){
   var dist=parseFloat(document.getElementById('ttDistance').value);
   var tRes = readTimeField('ttTime');
   var t = tRes.seconds;
   if (tRes.invalid){ alert('Minutes and seconds must be 0–59.'); return; }
-  if(!t||t<=0){alert('Enter a valid TT time (e.g. 22:10).');return;}
-  if(!state.plan.ttWeek){alert('No time trial scheduled in this plan.');return;}
+  if(!t||t<=0){alert('Enter a valid TT time.');return;}
+  if(!state.plan.ttWeek){alert('No time trial scheduled.');return;}
   var check = validateRaceInput(dist, t);
   if (!check.valid){ alert(check.reason.replace(/<[^>]+>/g,'')); return; }
   var newVdot=Vdot.fromRace(dist,t);
@@ -2003,7 +1976,8 @@ function handleRecalibrate(){
   var savedFeelMode = state.feelMode, savedFeelDays = state.feelDays, savedFeelStartDate = state.feelStartDate;
   var newResult=generatePlan({
     weeks:cfg.weeks, peakKm:cfg.peakKm, currentKm:cfg.currentKm,
-    paceVdot:newVdot, currentVdot:newVdot, targetVdot:Vdot.fromRace(cfg.goalDist,state.adjustedGoalTime), goalDist:cfg.goalDist, goalTime:state.adjustedGoalTime,
+    paceVdot:newVdot, currentVdot:newVdot, targetVdot:Vdot.fromRace(cfg.goalDist,state.adjustedGoalTime),
+    goalDist:cfg.goalDist, goalTime:state.adjustedGoalTime,
     restDays:state.allRestDays, longDay:state.longDay,
     startDate:cfg.startDate, raceIdx:cfg.raceIdx
   });
@@ -2026,30 +2000,33 @@ function handleRecalibrate(){
   var recalGoalVdot=Vdot.fromRace(cfg.goalDist,state.adjustedGoalTime);
   var recalGap=recalGoalVdot-newVdot;
   state.planMeta.goalSeverity=recalGap<=0.5?'green':(recalGap<=Math.max(1,extraGain*1.5)?'amber':'red');
-  state.planMeta.goalOutlookTitle=state.planMeta.goalSeverity==='green'?'Goal now aligns with time-trial fitness':(state.planMeta.goalSeverity==='amber'?'Goal remains ambitious — keep reassessing':'Stretch goal — current time-trial fitness is below target');
-  state.planMeta.goalOutlookDetail='Week '+ttWeek+' time trial: '+dist+' m in '+fmtTime(t)+' (VDOT '+newVdot.toFixed(1)+'). Goal: '+fmtTime(state.adjustedGoalTime)+'; VDOT gap '+(recalGap>=0?'+':'')+recalGap.toFixed(1)+'. Modelled race estimate after remaining training: '+fmtTime(projectedTime)+'; this is a heuristic, not a guarantee.';
-  state.planMeta.subtitle='Recalibrated after Week '+ttWeek+' TT — new VDOT '+newVdot.toFixed(1)+' ('+fmtTime(t)+' @ '+dist+'m)';
+  state.planMeta.goalOutlookTitle=state.planMeta.goalSeverity==='green'?'Goal now aligns with time-trial fitness':(state.planMeta.goalSeverity==='amber'?'Goal remains ambitious':'Stretch goal — current fitness is below target');
+  state.planMeta.goalOutlookDetail='Week '+ttWeek+' TT: '+dist+' m in '+fmtTime(t)+' (VDOT '+newVdot.toFixed(1)+'). Goal: '+fmtTime(state.adjustedGoalTime)+'; VDOT gap '+(recalGap>=0?'+':'')+recalGap.toFixed(1)+'. Modelled race estimate: '+fmtTime(projectedTime)+'.';
+  state.planMeta.subtitle='Recalibrated after Week '+ttWeek+' TT — new VDOT '+newVdot.toFixed(1);
   document.getElementById('plan').innerHTML=renderPlan(state.plan,state.planMeta,state.userName);
   var goalCheckHtml=renderGoalCheck(projectedTime,projectedAtRace,newVdot);
   document.getElementById('plan').insertAdjacentHTML('afterbegin',goalCheckHtml);
   var keepBtn2=document.getElementById('keepGoalBtn2');
   var acceptBtn=document.getElementById('acceptGoalBtn');
   var resetBtn=document.getElementById('resetGoalBtn');
-  if(keepBtn2)keepBtn2.addEventListener('click',function(){dismissGoalCheck('keep');});
+  if(keepBtn2)keepBtn2.addEventListener('click',function(){dismissGoalCheck();});
   if(acceptBtn)acceptBtn.addEventListener('click',function(){
     writeTimeField('goalTime', projectedTime);
-    updateInputState();
-    runStandardAnalysis();
+    onAnyInput();
+    runStandardAnalysis(false);
   });
   if(resetBtn)resetBtn.addEventListener('click',function(){
     var input=prompt('Enter your new goal time (HH:MM:SS):',fmtTime(state.originalGoalTime));
     if(input){
-      var t2=parseTime(input, state.cfg.goalDist);
-      if(t2&&t2>0){
-        writeTimeField('goalTime', t2);
-        updateInputState();
-        runStandardAnalysis();
-      }
+      var t2=null;
+      try{
+        if(input.indexOf(':')>=0){
+          var parts=input.split(':').map(Number);
+          if(parts.length===2)t2=parts[0]*60+parts[1];
+          else if(parts.length===3)t2=parts[0]*3600+parts[1]*60+parts[2];
+        }
+      }catch(e){}
+      if(t2&&t2>0){ writeTimeField('goalTime', t2); onAnyInput(); runStandardAnalysis(false); }
     }
   });
   if (state.plan.ttWeek){
@@ -2066,13 +2043,12 @@ function renderGoalCheck(projectedTime,projectedVdot,currentVdot){
   var gapMin=Math.floor(gapSec/60); var gapSecRem=Math.round(gapSec%60);
   var gapStr=gapMin+':'+(gapSecRem<10?'0':'')+gapSecRem;
   var message;
-  if(projectedIsFaster||gapSec<60){ message='Your time trial shows you\'re on track (or ahead) for your original goal of '+fmtTime(originalTime)+'. Keep going as planned.'; }
-  else { message='Your time trial shows fitness at <strong>VDOT '+currentVdot.toFixed(1)+'</strong>. With the remaining weeks, your realistic finish is closer to <strong>'+fmtTime(projectedTime)+'</strong> — about '+gapStr+' slower than your original goal of '+fmtTime(originalTime)+'. <strong>What would you like to do?</strong>'; }
-  return '<div class="goal-check no-print" id="goalCheck"><h3>Goal check — after the time trial</h3><p>'+message+'</p><div class="compare"><div class="compare-item"><div class="ci-label">Original goal</div><div class="ci-value">'+fmtTime(originalTime)+'</div><div class="ci-sub">Entered at plan start</div></div><div class="compare-item"><div class="ci-label">Projected at race day</div><div class="ci-value">'+fmtTime(projectedTime)+'</div><div class="ci-sub">Based on time trial + remaining weeks</div></div></div><div class="actions"><button class="btn primary" id="keepGoalBtn2">Keep original goal '+fmtTime(originalTime)+'</button><button class="btn green" id="acceptGoalBtn">Accept realistic goal '+fmtTime(projectedTime)+'</button><button class="btn" id="resetGoalBtn">Adjust goal manually</button></div></div>';
+  if(projectedIsFaster||gapSec<60){ message='Time trial shows you\'re on track for your original goal of '+fmtTime(originalTime)+'.'; }
+  else { message='Your time trial shows fitness at <strong>VDOT '+currentVdot.toFixed(1)+'</strong>. Realistic finish is closer to <strong>'+fmtTime(projectedTime)+'</strong> — about '+gapStr+' slower than your original goal of '+fmtTime(originalTime)+'.'; }
+  return '<div class="goal-check no-print" id="goalCheck"><h3>Goal check — after the time trial</h3><p>'+message+'</p><div class="compare"><div class="compare-item"><div class="ci-label">Original goal</div><div class="ci-value">'+fmtTime(originalTime)+'</div></div><div class="compare-item"><div class="ci-label">Projected at race day</div><div class="ci-value">'+fmtTime(projectedTime)+'</div></div></div><div class="actions"><button class="btn primary" id="keepGoalBtn2">Keep original goal</button><button class="btn green" id="acceptGoalBtn">Accept '+fmtTime(projectedTime)+'</button><button class="btn" id="resetGoalBtn">Adjust manually</button></div></div>';
 }
-function dismissGoalCheck(action,newTime){ var panel=document.getElementById('goalCheck'); if(!panel)return; panel.remove(); }
+function dismissGoalCheck(){ var p=document.getElementById('goalCheck'); if(p)p.remove(); }
 
-/* v28 — rest-day chips are plain buttons; no label/checkbox interference */
 function refreshRestDaysHint(setObj, hintEl, longDay){
   if (!hintEl) return;
   var arr = [];
@@ -2118,17 +2094,13 @@ function wireRestDayButtons(containerId, setObj, longDayFn, hintId){
       if (d === longDayFn()) return;
       if (setObj.has(d)) { setObj.delete(d); btn.classList.remove('on'); btn.setAttribute('aria-pressed','false'); }
       else { setObj.add(d); btn.classList.add('on'); btn.setAttribute('aria-pressed','true'); }
-            refreshRestDaysHint(setObj, document.getElementById(hintId), longDayFn());
-      updateInputState();
-      scheduleRegenerate();
+      refreshRestDaysHint(setObj, document.getElementById(hintId), longDayFn());
+      console.log('[PFC v28] Rest days now:', Array.from(setObj).map(function(x){return DAY_NAMES[x];}).join(', ') || 'NONE');
+      onAnyInput();
     });
   });
 }
-wireRestDayButtons('restDays', state.allRestDays, function(){ return state.longDay; }, 'restDaysHint');
-wireRestDayButtons('bRestDays', state.beginnerRestDays, function(){ return state.beginnerLongDay; }, 'bRestDaysHint');
 
-document.getElementById('longRunDay').addEventListener('change',function(){refreshRestDaysUI();updateInputState();scheduleRegenerate();});
-document.getElementById('bLongRunDay').addEventListener('change',function(){refreshBeginnerRestDaysUI();updateInputState();scheduleRegenerate();});
 document.querySelectorAll('.plan-tab').forEach(function(tab){
   tab.addEventListener('click', function(){
     document.querySelectorAll('.plan-tab').forEach(function(t){ t.classList.remove('on'); });
@@ -2170,7 +2142,7 @@ modeButtons.forEach(function(btn){
 feelApplyBtn.addEventListener('click',function(){
   if(!state.feelMode){ alert('Pick a mode first.'); return; }
   if(!state.planOriginal){ alert('Generate a plan first, then apply.'); return; }
-  if(state.planType === 'beginner'){ alert('The feeling adjuster isn\'t available for beginner plans yet. Just take an extra rest day if you need one.'); return; }
+  if(state.planType === 'beginner'){ alert('Not available for beginner plans.'); return; }
   var days=parseInt(document.getElementById('feelDays').value);
   var startSel=document.getElementById('feelStart').value;
   var startDate;
@@ -2208,7 +2180,7 @@ feelClearBtn.addEventListener('click',function(){
 });
 function updateFeelNote(count){
   if (state.planType === 'beginner'){
-    feelNote.innerHTML = 'Beginner plans don\'t support auto-adjustment. If you need a lighter day, take an extra rest day.';
+    feelNote.innerHTML = 'Beginner plans don\'t support auto-adjustment.';
     feelApplyBtn.disabled = true;
     return;
   }
@@ -2217,8 +2189,8 @@ function updateFeelNote(count){
     var label = state.feelMode==='fatigue' ? 'Fatigued' : (state.feelMode==='sick' ? 'Sick' : 'Busy');
     parts.push('Mode: <strong>'+label+'</strong>');
   }
-  if(count && count > 0){ parts.push(count+' day'+(count===1?'':'s')+' adjusted in the plan below.'); }
-  if(parts.length === 0){ feelNote.textContent = 'Select a mode and click Apply. The adjusted days will be highlighted; other days stay untouched.'; }
+  if(count && count > 0){ parts.push(count+' day'+(count===1?'':'s')+' adjusted.'); }
+  if(parts.length === 0){ feelNote.textContent = 'Select a mode and click Apply.'; }
   else { feelNote.innerHTML = parts.join(' · '); }
 }
 function applyFeelingAdjustment(plan, mode, days, startDate){
@@ -2234,18 +2206,16 @@ function applyFeelingAdjustment(plan, mode, days, startDate){
     for (var d = 0; d < weekDates.length; d++){
       var thisDate = new Date(weekDates[d]); thisDate.setHours(0,0,0,0);
       var thisT = thisDate.getTime();
-      if (thisT < startT) continue;
-      if (thisT > endT) continue;
+      if (thisT < startT || thisT > endT) continue;
       var day = week.days[d];
-      if (!day) continue;
-      if (day.zone === 'race') continue;
+      if (!day || day.zone === 'race') continue;
       var adj = adjustWorkout(day, mode, isFirstQOfWeek[week.number]);
       if (adj){
-        day.originalTitle = day.title; day.originalZone = day.zone; day.originalTotalKm = day.totalKm;
+        day.originalTitle = day.title; day.originalZone = day.zone;
         day.adjusted = true; day.adjustMode = mode;
         day.zone = adj.zone; day.title = adj.title; day.detail = adj.detail || ''; day.totalKm = adj.totalKm;
         day.isQ = false; day.qRank = null; day.isLongRun = false; day.isSim = false;
-        if (day.originalZone === 'T' || day.originalZone === 'I' || day.originalZone === 'R' || day.originalZone === 'M' || day.originalZone === 'tt') { isFirstQOfWeek[week.number] = false; }
+        if (['T','I','R','M','tt'].indexOf(day.originalZone) >= 0) isFirstQOfWeek[week.number] = false;
         count++;
       }
     }
@@ -2278,6 +2248,9 @@ function adjustWorkout(day, mode, isFirstQOfWeek){
   return null;
 }
 
+/* ============================================================
+   INIT
+============================================================ */
 setupTimeField('curTime');
 setupTimeField('goalTime');
 
@@ -2286,10 +2259,17 @@ for(var i=0;i<inputIds.length;i++){
   (function(id){
     var el=document.getElementById(id);
     if (!el) return;
-    el.addEventListener('input',function(){ updateInputState(); scheduleRegenerate(); });
-    el.addEventListener('change',function(){ updateInputState(); scheduleRegenerate(); });
+    el.addEventListener('input', onAnyInput);
+    el.addEventListener('change', onAnyInput);
   })(inputIds[i]);
 }
+
+document.getElementById('longRunDay').addEventListener('change', function(){ refreshRestDaysUI(); onAnyInput(); });
+document.getElementById('bLongRunDay').addEventListener('change', function(){ refreshBeginnerRestDaysUI(); onAnyInput(); });
+
+wireRestDayButtons('restDays', state.allRestDays, function(){ return state.longDay; }, 'restDaysHint');
+wireRestDayButtons('bRestDays', state.beginnerRestDays, function(){ return state.beginnerLongDay; }, 'bRestDaysHint');
+
 document.getElementById('useMinimumWeeksBtn').addEventListener('click',function(){setStartDateForDuration('minimum');});
 document.getElementById('useRecommendedWeeksBtn').addEventListener('click',function(){setStartDateForDuration('recommended');});
 document.getElementById('analyzeBtn').addEventListener('click',runAnalysis);
@@ -2307,29 +2287,21 @@ document.getElementById('copyEmailBtn').addEventListener('click',function(){
       var ta=document.createElement('textarea');
       ta.value=email; ta.style.position='fixed'; ta.style.left='-9999px';
       document.body.appendChild(ta); ta.select();
-      try{document.execCommand('copy');showToast('Email address copied');}catch(e){showToast('Copy failed — please note down: '+email);}
+      try{document.execCommand('copy');showToast('Email address copied');}catch(e){showToast('Copy failed: '+email);}
       document.body.removeChild(ta);
     });
   } else {
     var ta=document.createElement('textarea');
     ta.value=email; ta.style.position='fixed'; ta.style.left='-9999px';
     document.body.appendChild(ta); ta.select();
-    try{document.execCommand('copy');showToast('Email address copied');}catch(e){showToast('Copy failed — please note down: '+email);}
+    try{document.execCommand('copy');showToast('Email address copied');}catch(e){showToast('Copy failed: '+email);}
     document.body.removeChild(ta);
   }
-});
-document.getElementById('feedbackLink').addEventListener('click',function(e){
-  setTimeout(function(){
-    var email=document.getElementById('feedbackEmail').textContent.trim();
-    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(email).catch(function(){});
-  }, 100);
 });
 
 refreshRestDaysUI();
 refreshBeginnerRestDaysUI();
 updateInputState();
 </script>
-  <script src="./app.js" charset="UTF-8" defer></script>
-<script src="juju-mama.js?v=12"></script>
 </body>
 </html>
