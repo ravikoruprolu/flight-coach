@@ -1293,7 +1293,7 @@ function generatePlan(cfg){
     totalKm=Math.round(totalKm*10)/10;
     out.push({
       number:w, phase:phase, totalKm:totalKm, trainingKm:totalKm, raceKm:Math.round(raceKm*1000)/1000,
-      totalRunningKm:Math.round((totalKm+raceKm)*10)/10, days:days, paces:pac,
+            totalRunningKm:Math.round((totalKm+raceKm)*10)/10, days:days, paces:paces,
       isTT:isTTWeek, isSim:isSimWeek, isCutback:isCutback, isModReduced:isModReduced,
       capResult:capResult, startDate:cfg.startDate, weekLen:weekLen
     });
@@ -1322,7 +1322,7 @@ function generatePlan(cfg){
   restWeekdays.forEach(function(d){ cleanRestSet.add(d); });
   var validationCfg = Object.assign({}, cfg, { restDays: cleanRestSet });
 
-  var result={weeks:out,caps:caps,paces:pac,rehearsalNeeded:rehearsalNeeded,ttWeek:ttWeek,ttDistance:ttDistance,ttDistanceLabel:ttDistanceLabel,startDate:cfg.startDate,bounds:bounds};
+    var result={weeks:out,caps:caps,paces:paces,rehearsalNeeded:rehearsalNeeded,ttWeek:ttWeek,ttDistance:ttDistance,ttDistanceLabel:ttDistanceLabel,startDate:cfg.startDate,bounds:bounds};
   result.validation=validateTrainingPlan(result,validationCfg);
   return result;
 }
